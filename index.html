@@ -35,6 +35,8 @@
       padding: 10px 14px;
       border-radius: 8px;
       font-size: 14px;
+      max-width: 360px;
+      line-height: 1.4;
     }
 
     #loadingOverlay.hidden {
@@ -78,7 +80,7 @@
       bottom: 16px;
       left: 12px;
       z-index: 999;
-      width: 320px;
+      width: 340px;
       max-width: calc(100vw - 24px);
       background: rgba(20, 20, 20, 0.92);
       color: #fff;
@@ -97,6 +99,24 @@
       margin: 4px 0;
       font-size: 13px;
       line-height: 1.4;
+    }
+
+    #infoActions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    #infoActions a, #infoActions button {
+      background: #1f1f1f;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      text-decoration: none;
     }
 
     #measurePanel {
@@ -138,24 +158,40 @@
 
   <div id="infoPanel">
     <h3 id="infoTitle">Asset</h3>
+    <p><strong>ID:</strong> <span id="infoId">-</span></p>
     <p><strong>Tag:</strong> <span id="infoTag">-</span></p>
     <p><strong>Type:</strong> <span id="infoType">-</span></p>
     <p><strong>Zone:</strong> <span id="infoZone">-</span></p>
     <p><strong>Status:</strong> <span id="infoStatus">-</span></p>
+    <p><strong>Location:</strong> <span id="infoLocation">-</span></p>
     <p><strong>Notes:</strong> <span id="infoNotes">-</span></p>
+
+    <div id="infoActions">
+      <a id="openBaseRecord" href="#" target="_blank" rel="noopener noreferrer">Open Record</a>
+    </div>
   </div>
 
   <script type="module">
-    Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxZWVkNzhmZi1lNGY2LTQ4NDQtOWM2Ni05NjMwZGZkMDBiMjUiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY1MDU0OTd9.CVnqax6NGKgn7Os53x7ncVPw6I8IqiBhdPvCP8XZNn8";
+    Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0NDljNThhYS00YmVhLTQ4NDAtYWU0Zi05NGJmNTAxNDVkYWUiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY1MDgwOTN9.YcFAEyPfXRlannVzWFPDzGjIJ15QZWiGYUZD1KrHWuI";
 
+    // ====== CONFIG ======
+    const FUNCTION_URL = "YOUR_FUNCTION_URL";
+    const BASE_RECORD_URL = "https://your-base-app.com/DataCaptureForm?id=";
+    // Optional fallback if you later want project workspace link:
+    // const BASE_PROJECT_URL = "https://your-base-app.com/ProjectWorkspace?id=";
+
+    // ====== DOM ======
     const loadingOverlay = document.getElementById("loadingOverlay");
     const infoPanel = document.getElementById("infoPanel");
     const infoTitle = document.getElementById("infoTitle");
+    const infoId = document.getElementById("infoId");
     const infoTag = document.getElementById("infoTag");
     const infoType = document.getElementById("infoType");
     const infoZone = document.getElementById("infoZone");
     const infoStatus = document.getElementById("infoStatus");
+    const infoLocation = document.getElementById("infoLocation");
     const infoNotes = document.getElementById("infoNotes");
+    const openBaseRecord = document.getElementById("openBaseRecord");
 
     const btnHome = document.getElementById("btnHome");
     const btnMeasure = document.getElementById("btnMeasure");
@@ -165,6 +201,11 @@
     const measureStatus = document.getElementById("measureStatus");
     const measureResult = document.getElementById("measureResult");
 
+    // ====== URL PARAMS ======
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get("projectId");
+
+    // ====== VIEWER ======
     const viewer = new Cesium.Viewer("cesiumContainer", {
       animation: false,
       timeline: false,
@@ -194,56 +235,28 @@
       }
     };
 
-    const assetPins = [
-      {
-        id: "A001",
-        name: "Main Switchroom",
-        tag: "SWBD-01",
-        type: "Electrical Building",
-        zone: "Non-Ex",
-        status: "Active",
-        notes: "Primary site electrical distribution.",
-        longitude: 151.3434,
-        latitude: -33.4239,
-        height: 8
-      },
-      {
-        id: "A002",
-        name: "Dust Collector",
-        tag: "DC-201",
-        type: "Process Equipment",
-        zone: "Zone 22",
-        status: "Inspect",
-        notes: "Review ignition source controls.",
-        longitude: 151.3440,
-        latitude: -33.4238,
-        height: 12
-      },
-      {
-        id: "A003",
-        name: "Workshop Entry",
-        tag: "GATE-01",
-        type: "Access Point",
-        zone: "Non-Ex",
-        status: "Active",
-        notes: "Main personnel access point.",
-        longitude: 151.3427,
-        latitude: -33.4241,
-        height: 4
-      }
-    ];
-
     let measureMode = false;
     let measurePoints = [];
     let measureEntities = [];
 
     function showAssetInfo(asset) {
-      infoTitle.textContent = asset.name || "-";
+      infoTitle.textContent = asset.name || asset.tag || "Asset";
+      infoId.textContent = asset.id || "-";
       infoTag.textContent = asset.tag || "-";
       infoType.textContent = asset.type || "-";
       infoZone.textContent = asset.zone || "-";
       infoStatus.textContent = asset.status || "-";
+      infoLocation.textContent = asset.location || "-";
       infoNotes.textContent = asset.notes || "-";
+
+      if (asset.id) {
+        openBaseRecord.href = BASE_RECORD_URL + encodeURIComponent(asset.id);
+        openBaseRecord.style.display = "inline-block";
+      } else {
+        openBaseRecord.href = "#";
+        openBaseRecord.style.display = "none";
+      }
+
       infoPanel.style.display = "block";
     }
 
@@ -273,23 +286,32 @@
       measureStatus.textContent = "Mode: " + (measureMode ? "On" : "Off");
     }
 
-    function addAssetPins() {
-      for (const asset of assetPins) {
-        const entity = viewer.entities.add({
+    function createPinImage(asset) {
+      // Later you can swap icon by zone/status/type
+      return "https://cdn-icons-png.flaticon.com/512/684/684908.png";
+    }
+
+    function addAssetPins(assets) {
+      for (const asset of assets) {
+        if (typeof asset.lat !== "number" || typeof asset.lng !== "number") {
+          continue;
+        }
+
+        viewer.entities.add({
           id: asset.id,
-          name: asset.name,
+          name: asset.name || asset.tag || asset.id,
           position: Cesium.Cartesian3.fromDegrees(
-            asset.longitude,
-            asset.latitude,
+            asset.lng,
+            asset.lat,
             asset.height || 0
           ),
           billboard: {
-            image: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+            image: createPinImage(asset),
             scale: 0.08,
             verticalOrigin: Cesium.VerticalOrigin.BOTTOM
           },
           label: {
-            text: asset.tag,
+            text: asset.tag || asset.id || "Asset",
             font: "13px sans-serif",
             style: Cesium.LabelStyle.FILL_AND_OUTLINE,
             outlineWidth: 2,
@@ -298,27 +320,49 @@
             distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1200)
           },
           properties: {
-            assetId: asset.id,
-            tag: asset.tag,
-            type: asset.type,
-            zone: asset.zone,
-            status: asset.status,
-            notes: asset.notes
+            assetId: asset.id || "",
+            tag: asset.tag || "",
+            type: asset.type || "",
+            zone: asset.zone || "",
+            status: asset.status || "",
+            notes: asset.notes || "",
+            location: asset.location || "",
+            projectId: asset.project_id || ""
           }
         });
       }
     }
 
+    async function fetchProjectAssets() {
+      if (!projectId) {
+        throw new Error("Missing projectId in URL. Example: ?projectId=YOUR_PROJECT_ID");
+      }
+
+      const res = await fetch(`${FUNCTION_URL}?projectId=${encodeURIComponent(projectId)}`);
+
+      if (!res.ok) {
+        throw new Error(`Asset fetch failed with status ${res.status}`);
+      }
+
+      const assets = await res.json();
+
+      if (!Array.isArray(assets)) {
+        throw new Error("Asset response is not an array.");
+      }
+
+      return assets;
+    }
+
     async function loadScene() {
       try {
+        loadingOverlay.textContent = "Loading Sentinel 3D tiles...";
+
         const googleTiles = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
         viewer.scene.primitives.add(googleTiles);
 
-        // Optional fallback layer, keep off by default
+        // Keep off unless needed
         // const osmBuildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
         // viewer.scene.primitives.add(osmBuildings);
-
-        addAssetPins();
 
         await viewer.camera.flyTo({
           destination: homeView.destination,
@@ -326,10 +370,31 @@
           duration: 2
         });
 
+        loadingOverlay.textContent = "Loading project assets from Base...";
+        const assets = await fetchProjectAssets();
+
+        addAssetPins(assets);
+
+        if (assets.length > 0) {
+          const validAssets = assets.filter(a => typeof a.lat === "number" && typeof a.lng === "number");
+          if (validAssets.length > 0) {
+            const first = validAssets[0];
+            await viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(first.lng, first.lat, 500),
+              orientation: {
+                heading: Cesium.Math.toRadians(15),
+                pitch: Cesium.Math.toRadians(-35),
+                roll: 0
+              },
+              duration: 2
+            });
+          }
+        }
+
         loadingOverlay.classList.add("hidden");
       } catch (error) {
         console.error("Failed to load Sentinel 3D scene:", error);
-        loadingOverlay.textContent = "Failed to load 3D scene. Check token / asset access.";
+        loadingOverlay.textContent = `Failed to load scene: ${error.message}`;
       }
     }
 
@@ -343,12 +408,14 @@
         const props = entity.properties;
 
         showAssetInfo({
-          name: entity.name,
+          id: props?.assetId?.getValue?.() ?? entity.id ?? "-",
+          name: entity.name ?? "-",
           tag: props?.tag?.getValue?.() ?? "-",
           type: props?.type?.getValue?.() ?? "-",
           zone: props?.zone?.getValue?.() ?? "-",
           status: props?.status?.getValue?.() ?? "-",
-          notes: props?.notes?.getValue?.() ?? "-"
+          notes: props?.notes?.getValue?.() ?? "-",
+          location: props?.location?.getValue?.() ?? "-"
         });
 
         viewer.flyTo(entity, {
