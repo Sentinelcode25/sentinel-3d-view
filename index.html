@@ -41,7 +41,7 @@
     viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
     viewer.scene.globe.depthTestAgainstTerrain = true;
 
-    const googleTiles = await Cesium.createGooglePhotorealistic3DTileset();
+    const googleTiles = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
     viewer.scene.primitives.add(googleTiles);
 
     const osmBuildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
