@@ -1,21 +1,70 @@
-<script type="text/javascript">
-    // Your other code here
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sentinel 3D View</title>
+
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
+  <link
+    href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css"
+    rel="stylesheet"
+  />
+
+  <style>
+    html, body, #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+
+  <script type="module">
+    Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxZWVkNzhmZi1lNGY2LTQ4NDQtOWM2Ni05NjMwZGZkMDBiMjUiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY1MDU0OTd9.CVnqax6NGKgn7Os53x7ncVPw6I8IqiBhdPvCP8XZNn8";
+
+    const viewer = new Cesium.Viewer("cesiumContainer", {
+      animation: false,
+      timeline: false,
+      baseLayerPicker: true,
+      geocoder: true,
+      homeButton: true,
+      sceneModePicker: false,
+      navigationHelpButton: false,
+      terrain: Cesium.Terrain.fromWorldTerrain(),
+    });
+
+    viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
+    viewer.scene.globe.depthTestAgainstTerrain = true;
 
     try {
-        // Attempt to load googleTiles
-        // replace with actual loading function
-        googleTiles.load();
+      const googleTiles = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
+      viewer.scene.primitives.add(googleTiles);
+
+      const osmBuildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
+      viewer.scene.primitives.add(osmBuildings);
     } catch (error) {
-        console.error('Failed to load googleTiles:', error);
+      console.error("Failed to load 3D tiles:", error);
     }
 
-    try {
-        // Attempt to load osmBuildings
-        // replace with actual loading function
-        osmBuildings.load();
-    } catch (error) {
-        console.error('Failed to load osmBuildings:', error);
-    }
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(function (click) {
+      const pickedPosition = viewer.scene.pickPosition(click.position);
+      if (Cesium.defined(pickedPosition)) {
+        viewer.camera.flyTo({
+          destination: pickedPosition,
+          duration: 1.5,
+        });
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // Continue with your script
-</script>
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(151.2093, -33.8688, 2000),
+      duration: 2,
+    });
+  </script>
+</body>
+</html>
