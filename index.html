@@ -18,6 +18,7 @@
       padding: 0;
       overflow: hidden;
       font-family: Arial, sans-serif;
+      background: #0f1115;
     }
 
     .cesium-viewer-toolbar {
@@ -25,9 +26,37 @@
       right: 10px;
     }
 
-    #loadingOverlay {
+    #topHeader {
       position: absolute;
       top: 12px;
+      left: 12px;
+      z-index: 999;
+      min-width: 320px;
+      max-width: 520px;
+      background: rgba(10, 12, 18, 0.90);
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+
+    #headerTitle {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ff3b30;
+    }
+
+    #headerSubtitle {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #d0d7e2;
+      line-height: 1.4;
+    }
+
+    #loadingOverlay {
+      position: absolute;
+      top: 94px;
       left: 12px;
       z-index: 999;
       background: rgba(20, 20, 20, 0.88);
@@ -35,7 +64,7 @@
       padding: 10px 14px;
       border-radius: 8px;
       font-size: 14px;
-      max-width: 360px;
+      max-width: 420px;
       line-height: 1.4;
     }
 
@@ -45,7 +74,7 @@
 
     #toolbarPanel {
       position: absolute;
-      top: 56px;
+      top: 146px;
       left: 12px;
       z-index: 999;
       display: flex;
@@ -73,6 +102,24 @@
     #toolbarPanel button.active {
       background: #b00020;
       border-color: #d63a55;
+    }
+
+    #measurePanel {
+      position: absolute;
+      top: 210px;
+      left: 12px;
+      z-index: 999;
+      background: rgba(20, 20, 20, 0.92);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      min-width: 220px;
+    }
+
+    #measurePanel strong {
+      display: block;
+      margin-bottom: 6px;
     }
 
     #infoPanel {
@@ -108,7 +155,7 @@
       flex-wrap: wrap;
     }
 
-    #infoActions a, #infoActions button {
+    #infoActions a {
       background: #1f1f1f;
       color: #fff;
       border: 1px solid #444;
@@ -119,27 +166,47 @@
       text-decoration: none;
     }
 
-    #measurePanel {
+    #emptyState {
       position: absolute;
-      top: 120px;
-      left: 12px;
-      z-index: 999;
-      background: rgba(20, 20, 20, 0.92);
-      color: #fff;
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-size: 13px;
-      min-width: 220px;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 998;
+      background: rgba(5, 8, 12, 0.65);
     }
 
-    #measurePanel strong {
-      display: block;
-      margin-bottom: 6px;
+    #emptyCard {
+      width: min(520px, calc(100vw - 32px));
+      background: rgba(10, 12, 18, 0.94);
+      color: #fff;
+      padding: 22px 24px;
+      border-radius: 14px;
+      box-shadow: 0 10px 26px rgba(0,0,0,0.40);
+      text-align: left;
+    }
+
+    #emptyCard h2 {
+      margin: 0 0 10px 0;
+      font-size: 22px;
+      color: #ff3b30;
+    }
+
+    #emptyCard p {
+      margin: 0;
+      line-height: 1.5;
+      color: #d4d9e2;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
+
+  <div id="topHeader">
+    <h1 id="headerTitle">Sentinel GIS</h1>
+    <div id="headerSubtitle">3D project view</div>
+  </div>
 
   <div id="loadingOverlay">Loading Sentinel 3D view...</div>
 
@@ -158,7 +225,6 @@
 
   <div id="infoPanel">
     <h3 id="infoTitle">Asset</h3>
-    <p><strong>ID:</strong> <span id="infoId">-</span></p>
     <p><strong>Tag:</strong> <span id="infoTag">-</span></p>
     <p><strong>Type:</strong> <span id="infoType">-</span></p>
     <p><strong>Zone:</strong> <span id="infoZone">-</span></p>
@@ -171,20 +237,30 @@
     </div>
   </div>
 
+  <div id="emptyState">
+    <div id="emptyCard">
+      <h2>No project selected</h2>
+      <p>
+        Please open this 3D view from the Sentinel Project Workspace.
+        This viewer is designed to launch inside an active project context.
+      </p>
+    </div>
+  </div>
+
   <script type="module">
     Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0NDljNThhYS00YmVhLTQ4NDAtYWU0Zi05NGJmNTAxNDVkYWUiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY1MDgwOTN9.YcFAEyPfXRlannVzWFPDzGjIJ15QZWiGYUZD1KrHWuI";
 
-    // ====== CONFIG ======
     const FUNCTION_URL = "YOUR_FUNCTION_URL";
     const BASE_RECORD_URL = "https://your-base-app.com/DataCaptureForm?id=";
-    // Optional fallback if you later want project workspace link:
-    // const BASE_PROJECT_URL = "https://your-base-app.com/ProjectWorkspace?id=";
 
-    // ====== DOM ======
     const loadingOverlay = document.getElementById("loadingOverlay");
+    const emptyState = document.getElementById("emptyState");
+
+    const headerTitle = document.getElementById("headerTitle");
+    const headerSubtitle = document.getElementById("headerSubtitle");
+
     const infoPanel = document.getElementById("infoPanel");
     const infoTitle = document.getElementById("infoTitle");
-    const infoId = document.getElementById("infoId");
     const infoTag = document.getElementById("infoTag");
     const infoType = document.getElementById("infoType");
     const infoZone = document.getElementById("infoZone");
@@ -201,11 +277,9 @@
     const measureStatus = document.getElementById("measureStatus");
     const measureResult = document.getElementById("measureResult");
 
-    // ====== URL PARAMS ======
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get("projectId");
 
-    // ====== VIEWER ======
     const viewer = new Cesium.Viewer("cesiumContainer", {
       animation: false,
       timeline: false,
@@ -226,7 +300,7 @@
     viewer.scene.screenSpaceCameraController.maximumZoomDistance = 5000;
     viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 2);
 
-    const homeView = {
+    const defaultHomeView = {
       destination: Cesium.Cartesian3.fromDegrees(151.3430, -33.4237, 700),
       orientation: {
         heading: Cesium.Math.toRadians(15),
@@ -235,13 +309,14 @@
       }
     };
 
+    let activeHomeView = defaultHomeView;
+
     let measureMode = false;
     let measurePoints = [];
     let measureEntities = [];
 
     function showAssetInfo(asset) {
       infoTitle.textContent = asset.name || asset.tag || "Asset";
-      infoId.textContent = asset.id || "-";
       infoTag.textContent = asset.tag || "-";
       infoType.textContent = asset.type || "-";
       infoZone.textContent = asset.zone || "-";
@@ -286,32 +361,50 @@
       measureStatus.textContent = "Mode: " + (measureMode ? "On" : "Off");
     }
 
-    function createPinImage(asset) {
-      // Later you can swap icon by zone/status/type
+    function createPinImage() {
       return "https://cdn-icons-png.flaticon.com/512/684/684908.png";
     }
 
+    function normalizeAsset(asset) {
+      return {
+        id: asset.id ?? "",
+        project_id: asset.project_id ?? "",
+        tag: asset.tag ?? asset.asset_tag_number ?? "",
+        name: asset.name ?? asset.asset_tag_number ?? "Asset",
+        type: asset.type ?? asset.asset_equipment_type ?? "",
+        zone: asset.zone ?? asset.zone_classification ?? "",
+        status: asset.status ?? "",
+        location: asset.location ?? asset.asset_functional_location ?? "",
+        notes: asset.notes ?? "",
+        lat: Number(asset.lat ?? asset.latitude),
+        lng: Number(asset.lng ?? asset.longitude),
+        height: Number(asset.height ?? 0)
+      };
+    }
+
     function addAssetPins(assets) {
-      for (const asset of assets) {
-        if (typeof asset.lat !== "number" || typeof asset.lng !== "number") {
+      for (const rawAsset of assets) {
+        const asset = normalizeAsset(rawAsset);
+
+        if (!Number.isFinite(asset.lat) || !Number.isFinite(asset.lng)) {
           continue;
         }
 
         viewer.entities.add({
           id: asset.id,
-          name: asset.name || asset.tag || asset.id,
+          name: asset.name,
           position: Cesium.Cartesian3.fromDegrees(
             asset.lng,
             asset.lat,
-            asset.height || 0
+            asset.height
           ),
           billboard: {
-            image: createPinImage(asset),
+            image: createPinImage(),
             scale: 0.08,
             verticalOrigin: Cesium.VerticalOrigin.BOTTOM
           },
           label: {
-            text: asset.tag || asset.id || "Asset",
+            text: asset.tag || asset.name || "Asset",
             font: "13px sans-serif",
             style: Cesium.LabelStyle.FILL_AND_OUTLINE,
             outlineWidth: 2,
@@ -320,24 +413,20 @@
             distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1200)
           },
           properties: {
-            assetId: asset.id || "",
-            tag: asset.tag || "",
-            type: asset.type || "",
-            zone: asset.zone || "",
-            status: asset.status || "",
-            notes: asset.notes || "",
-            location: asset.location || "",
-            projectId: asset.project_id || ""
+            assetId: asset.id,
+            tag: asset.tag,
+            type: asset.type,
+            zone: asset.zone,
+            status: asset.status,
+            notes: asset.notes,
+            location: asset.location,
+            projectId: asset.project_id
           }
         });
       }
     }
 
     async function fetchProjectAssets() {
-      if (!projectId) {
-        throw new Error("Missing projectId in URL. Example: ?projectId=YOUR_PROJECT_ID");
-      }
-
       const res = await fetch(`${FUNCTION_URL}?projectId=${encodeURIComponent(projectId)}`);
 
       if (!res.ok) {
@@ -353,48 +442,96 @@
       return assets;
     }
 
+    function updateProjectHeader(assets) {
+      if (!assets || assets.length === 0) {
+        headerTitle.textContent = "Sentinel GIS";
+        headerSubtitle.textContent = "3D project view";
+        return;
+      }
+
+      const first = assets[0];
+
+      const projectTitle =
+        first.project_title ||
+        first.document_title ||
+        first.project_name ||
+        "Sentinel GIS";
+
+      const customer =
+        first.customer ||
+        first.customer_name ||
+        "";
+
+      const jobId =
+        first.job_id ||
+        first.job_number ||
+        "";
+
+      const plantUnit =
+        first.plant_unit ||
+        first.asset_functional_location ||
+        "";
+
+      headerTitle.textContent = projectTitle;
+
+      const subtitleParts = [customer, jobId, plantUnit].filter(Boolean);
+      headerSubtitle.textContent = subtitleParts.length > 0
+        ? subtitleParts.join(" | ")
+        : "3D project view";
+    }
+
     async function loadScene() {
       try {
-        loadingOverlay.textContent = "Loading Sentinel 3D tiles...";
+        loadingOverlay.textContent = "Loading Sentinel 3D view...";
 
         const googleTiles = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
         viewer.scene.primitives.add(googleTiles);
 
-        // Keep off unless needed
-        // const osmBuildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
-        // viewer.scene.primitives.add(osmBuildings);
-
         await viewer.camera.flyTo({
-          destination: homeView.destination,
-          orientation: homeView.orientation,
+          destination: activeHomeView.destination,
+          orientation: activeHomeView.orientation,
           duration: 2
         });
 
-        loadingOverlay.textContent = "Loading project assets from Base...";
+        if (!projectId) {
+          loadingOverlay.classList.add("hidden");
+          emptyState.style.display = "flex";
+          return;
+        }
+
+        loadingOverlay.textContent = "Loading project assets...";
         const assets = await fetchProjectAssets();
 
+        updateProjectHeader(assets);
         addAssetPins(assets);
 
-        if (assets.length > 0) {
-          const validAssets = assets.filter(a => typeof a.lat === "number" && typeof a.lng === "number");
-          if (validAssets.length > 0) {
-            const first = validAssets[0];
-            await viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(first.lng, first.lat, 500),
-              orientation: {
-                heading: Cesium.Math.toRadians(15),
-                pitch: Cesium.Math.toRadians(-35),
-                roll: 0
-              },
-              duration: 2
-            });
-          }
+        const validAssets = assets
+          .map(normalizeAsset)
+          .filter(a => Number.isFinite(a.lat) && Number.isFinite(a.lng));
+
+        if (validAssets.length > 0) {
+          const first = validAssets[0];
+
+          activeHomeView = {
+            destination: Cesium.Cartesian3.fromDegrees(first.lng, first.lat, 500),
+            orientation: {
+              heading: Cesium.Math.toRadians(15),
+              pitch: Cesium.Math.toRadians(-35),
+              roll: 0
+            }
+          };
+
+          await viewer.camera.flyTo({
+            destination: activeHomeView.destination,
+            orientation: activeHomeView.orientation,
+            duration: 2
+          });
         }
 
         loadingOverlay.classList.add("hidden");
       } catch (error) {
         console.error("Failed to load Sentinel 3D scene:", error);
-        loadingOverlay.textContent = `Failed to load scene: ${error.message}`;
+        loadingOverlay.textContent = "Unable to load project data. Please reopen this view from Sentinel Project Workspace.";
       }
     }
 
@@ -489,8 +626,8 @@
 
     btnHome.addEventListener("click", function () {
       viewer.camera.flyTo({
-        destination: homeView.destination,
-        orientation: homeView.orientation,
+        destination: activeHomeView.destination,
+        orientation: activeHomeView.orientation,
         duration: 2
       });
     });
