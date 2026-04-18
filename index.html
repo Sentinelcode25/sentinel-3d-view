@@ -17,14 +17,40 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
+      font-family: sans-serif;
+    }
+
+    .cesium-viewer-toolbar {
+      top: 10px;
+      right: 10px;
+    }
+
+    #loadingOverlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 999;
+      background: rgba(20, 20, 20, 0.85);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    #loadingOverlay.hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
+  <div id="loadingOverlay">Loading Sentinel 3D view...</div>
 
   <script type="module">
-    Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxZWVkNzhmZi1lNGY2LTQ4NDQtOWM2Ni05NjMwZGZkMDBiMjUiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY1MDU0OTd9.CVnqax6NGKgn7Os53x7ncVPw6I8IqiBhdPvCP8XZNn8";
+    Cesium.Ion.defaultAccessToken = "YOUR_NEW_TOKEN_HERE";
+
+    const loadingOverlay = document.getElementById("loadingOverlay");
 
     const viewer = new Cesium.Viewer("cesiumContainer", {
       animation: false,
@@ -34,37 +60,80 @@
       homeButton: true,
       sceneModePicker: false,
       navigationHelpButton: false,
+      fullscreenButton: true,
+      infoBox: false,
+      selectionIndicator: false,
       terrain: Cesium.Terrain.fromWorldTerrain(),
     });
 
+    // Camera / navigation behaviour
     viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
     viewer.scene.globe.depthTestAgainstTerrain = true;
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 10;
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 5000;
 
-    try {
-      const googleTiles = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
-      viewer.scene.primitives.add(googleTiles);
+    // Optional: improve visual sharpness slightly on supported devices
+    viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, 2);
 
-      const osmBuildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
-      viewer.scene.primitives.add(osmBuildings);
-    } catch (error) {
-      console.error("Failed to load 3D tiles:", error);
+    async function loadScene() {
+      try {
+        // Primary layer: Google Photorealistic 3D Tiles
+        const googleTiles = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
+        viewer.scene.primitives.add(googleTiles);
+
+        // Optional fallback layer: Cesium OSM Buildings
+        // Leave OFF by default because it can create grey block overlays
+        // in areas where photogrammetry already exists.
+        //
+        // const osmBuildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
+        // viewer.scene.primitives.add(osmBuildings);
+
+        // Initial camera view
+        await viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(151.2093, -33.8688, 800),
+          orientation: {
+            heading: Cesium.Math.toRadians(20),
+            pitch: Cesium.Math.toRadians(-35),
+            roll: 0
+          },
+          duration: 2
+        });
+
+        loadingOverlay.classList.add("hidden");
+      } catch (error) {
+        console.error("Failed to load Sentinel 3D scene:", error);
+        loadingOverlay.textContent = "Failed to load 3D tiles. Check token / asset access.";
+      }
     }
 
+    // Click-to-fly inspection interaction
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction(function (click) {
       const pickedPosition = viewer.scene.pickPosition(click.position);
+
       if (Cesium.defined(pickedPosition)) {
         viewer.camera.flyTo({
           destination: pickedPosition,
-          duration: 1.5,
+          duration: 1.5
         });
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(151.2093, -33.8688, 2000),
-      duration: 2,
+    // Optional: make Home button return to your preferred startup view
+    viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function (e) {
+      e.cancel = true;
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(151.2093, -33.8688, 800),
+        orientation: {
+          heading: Cesium.Math.toRadians(20),
+          pitch: Cesium.Math.toRadians(-35),
+          roll: 0
+        },
+        duration: 2
+      });
     });
+
+    loadScene();
   </script>
 </body>
 </html>
