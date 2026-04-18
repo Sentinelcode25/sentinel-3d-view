@@ -1,68 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Sentinel 3D View</title>
+<script type="text/javascript">
+    // Your other code here
 
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
-  <link
-    href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css"
-    rel="stylesheet"
-  />
-
-  <style>
-    html, body, #cesiumContainer {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
+    try {
+        // Attempt to load googleTiles
+        // replace with actual loading function
+        googleTiles.load();
+    } catch (error) {
+        console.error('Failed to load googleTiles:', error);
     }
-  </style>
-</head>
-<body>
-  <div id="cesiumContainer"></div>
 
-  <script type="module">
-    Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5OGU2YmIyYS00ZmJlLTQ2NzQtYjM4MC1iZDMzZGIzMWY5MmUiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY1MDE1MTl9.vbtyGuwe2wS9DayyJyd3g[...]"
+    try {
+        // Attempt to load osmBuildings
+        // replace with actual loading function
+        osmBuildings.load();
+    } catch (error) {
+        console.error('Failed to load osmBuildings:', error);
+    }
 
-    const viewer = new Cesium.Viewer("cesiumContainer", {
-      animation: false,
-      timeline: false,
-      baseLayerPicker: true,
-      geocoder: true,
-      homeButton: true,
-      sceneModePicker: false,
-      navigationHelpButton: false,
-      terrain: Cesium.Terrain.fromWorldTerrain(),
-    });
-
-    // Step 1 — Improve navigation
-    viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
-    viewer.scene.globe.depthTestAgainstTerrain = true;
-
-    const googleTiles = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
-    viewer.scene.primitives.add(googleTiles);
-
-    const osmBuildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
-    viewer.scene.primitives.add(osmBuildings);
-
-    // Step 2 — Add zoom-to-click (inspection feel)
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-
-    handler.setInputAction(function (click) {
-      const pickedPosition = viewer.scene.pickPosition(click.position);
-      if (Cesium.defined(pickedPosition)) {
-        viewer.camera.flyTo({
-          destination: pickedPosition,
-          duration: 1.5
-        });
-      }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(151.2093, -33.8688, 2000)
-    });
-  </script>
-</body>
-</html>
+    // Continue with your script
+</script>
