@@ -123,7 +123,7 @@
     <strong id="drawTitle">✏️ Draw</strong>
     <div id="drawPointCount">0 points — click to add vertices</div>
     <button class="drawBtn" id="drawUndoBtn">↩ Undo</button>
-    <button class="drawBtn primary" id="drawFinishBtn">✓ Finish & Save</button>
+    <button class="drawBtn primary" id="drawFinishBtn">✓ Finish &amp; Save</button>
     <button class="drawBtn" id="drawCancelBtn">✕ Cancel</button>
   </div>
 
@@ -159,53 +159,51 @@
   </div>
 
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// SENTINEL GIS — CESIUM 3D VIEWER  v4.0
-// Full postMessage bridge + asset/zone/note/shape rendering
-// Data fetched via Base44 backend function (authenticated, CORS-enabled)
-// ─────────────────────────────────────────────────────────────────────────────
-
 const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmYzY2MWZkNi0wZTY1LTQ5MmQtYjVlYi02Njk2ODBiZDcyN2MiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY2MDA2Mzl9.nFohVpwcL5-nA1ObMbiFgyJFV6-EaNNqa3A4_3p3y4E';
 const DATA_API = 'https://app.base44.com/api/apps/69b3fe5c9c81ee057de2ffd1/functions/getProjectMapData';
 
 const ZONE_FILL = {
-  'Gas Zone 0':   [225, 6, 0, 0.5],   'Gas Zone 1':   [255, 107, 0, 0.4],
-  'Gas Zone 2':   [255, 214, 0, 0.3], 'Dust Zone 20': [204, 0, 0, 0.5],
-  'Dust Zone 21': [255, 69, 0, 0.4],  'Dust Zone 22': [255, 165, 0, 0.3],
-  'No Classification Required': [34, 197, 94, 0.2],
+  'Gas Zone 0':   [225,6,0,0.5],    'Gas Zone 1':   [255,107,0,0.4],
+  'Gas Zone 2':   [255,214,0,0.3],  'Dust Zone 20': [204,0,0,0.5],
+  'Dust Zone 21': [255,69,0,0.4],   'Dust Zone 22': [255,165,0,0.3],
+  'No Classification Required': [34,197,94,0.2],
 };
 const ZONE_OUTLINE = {
-  'Gas Zone 0': '#E10600', 'Gas Zone 1': '#FF6B00', 'Gas Zone 2': '#FFD600',
-  'Dust Zone 20': '#CC0000', 'Dust Zone 21': '#FF4500', 'Dust Zone 22': '#FFA500',
-  'No Classification Required': '#22c55e',
+  'Gas Zone 0':'#E10600','Gas Zone 1':'#FF6B00','Gas Zone 2':'#FFD600',
+  'Dust Zone 20':'#CC0000','Dust Zone 21':'#FF4500','Dust Zone 22':'#FFA500',
+  'No Classification Required':'#22c55e',
 };
 const DEFAULT_ZONE_RADIUS = {
-  'Gas Zone 0': 0.5, 'Gas Zone 1': 3, 'Gas Zone 2': 8,
-  'Dust Zone 20': 0.5, 'Dust Zone 21': 1.5, 'Dust Zone 22': 4,
+  'Gas Zone 0':0.5,'Gas Zone 1':3,'Gas Zone 2':8,
+  'Dust Zone 20':0.5,'Dust Zone 21':1.5,'Dust Zone 22':4,
 };
 const PIN_COLOR = {
-  'Gas Zone 0': '#E10600', 'Gas Zone 1': '#FF6B00', 'Gas Zone 2': '#FFD600',
-  'Dust Zone 20': '#CC0000', 'Dust Zone 21': '#FF4500', 'Dust Zone 22': '#FFA500',
-  'No Classification Required': '#22c55e', default: '#94a3b8',
+  'Gas Zone 0':'#E10600','Gas Zone 1':'#FF6B00','Gas Zone 2':'#FFD600',
+  'Dust Zone 20':'#CC0000','Dust Zone 21':'#FF4500','Dust Zone 22':'#FFA500',
+  'No Classification Required':'#22c55e',default:'#94a3b8',
 };
 
 let viewer, projectId;
-let layers = { assets: true, hazardZones: true, notes: true };
-const groups = { assets: [], hazardZones: [], notes: [], shapes: [] };
+let layers = { assets:true, hazardZones:true, notes:true };
+const groups = { assets:[], hazardZones:[], notes:[], shapes:[] };
 let mode = 'idle';
-let measurePoints = [], measureEntities = [];
-let drawPoints = [], drawEntities = [], drawType = 'polygon';
-let pendingNote = null, selectedRecord = null;
+let measurePoints=[], measureEntities=[];
+let drawPoints=[], drawEntities=[], drawType='polygon';
+let pendingNote=null, selectedRecord=null;
 
-// ── Haversine ──────────────────────────────────────────────────────────────
-function hav(lat1,lng1,lat2,lng2){const R=6371000,d2r=Math.PI/180,dL=(lat2-lat1)*d2r,dN=(lng2-lng1)*d2r,a=Math.sin(dL/2)**2+Math.cos(lat1*d2r)*Math.cos(lat2*d2r)*Math.sin(dN/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
-function fmt(m){return m>=1000?`${(m/1000).toFixed(2)} km`:`${Math.round(m)} m`;}
+const toRad = d => d * Math.PI / 180;
+function hav(lat1,lng1,lat2,lng2){
+  const R=6371000;
+  const dL=toRad(lat2-lat1), dN=toRad(lng2-lng1);
+  const a=Math.sin(dL/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dN/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function fmt(m){ return m>=1000?`${(m/1000).toFixed(2)} km`:`${Math.round(m)} m`; }
 
-// ── postMessage ────────────────────────────────────────────────────────────
 function post(msg){ try{ window.parent.postMessage(msg,'*'); }catch(e){} }
 
 window.addEventListener('message', e => {
-  const d = e.data; if(!d||!d.type) return;
+  const d=e.data; if(!d||!d.type) return;
   if(d.type==='FLY_TO') flyTo(d.lat,d.lng,d.height||200);
   if(d.type==='LAYER_TOGGLE'){ layers[d.layer]=d.visible; applyLayers(); }
   if(d.type==='SET_MODE') setMode(d.mode);
@@ -217,43 +215,38 @@ function flyTo(lat,lng,h=200){
   viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(lng,lat,h),duration:1.5});
 }
 
-// ── Mode ───────────────────────────────────────────────────────────────────
-function setMode(m) {
-  mode = m;
-  const msgs = {
+function setMode(m){
+  mode=m;
+  const msgs={
     measure:'📏 Click to place measurement points',
     draw_polygon:'⬡ Click to place polygon vertices',
     draw_polyline:'〰 Click to place line points',
     note:'📝 Click anywhere on the scene to place note',
   };
-  const banner = document.getElementById('modeBanner');
+  const banner=document.getElementById('modeBanner');
   if(m!=='idle'&&msgs[m]){ banner.textContent=msgs[m]; banner.classList.add('visible'); }
   else { banner.classList.remove('visible'); }
-
-  document.getElementById('measurePanel').classList.toggle('visible', m==='measure');
-  document.getElementById('drawPanel').classList.toggle('visible', m==='draw_polygon'||m==='draw_polyline');
+  document.getElementById('measurePanel').classList.toggle('visible',m==='measure');
+  document.getElementById('drawPanel').classList.toggle('visible',m==='draw_polygon'||m==='draw_polyline');
   if(m==='draw_polygon') document.getElementById('drawTitle').textContent='⬡ Draw Polygon';
   if(m==='draw_polyline') document.getElementById('drawTitle').textContent='〰 Draw Line';
-
-  if(m!=='measure'){clearMeasure();}
-  if(m!=='draw_polygon'&&m!=='draw_polyline'){clearDraw();}
+  if(m!=='measure') clearMeasure();
+  if(m!=='draw_polygon'&&m!=='draw_polyline') clearDraw();
 }
 
-// ── Cesium init ────────────────────────────────────────────────────────────
-async function initCesium() {
+async function initCesium(){
   Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
   viewer = new Cesium.Viewer('cesiumContainer',{
-    timeline:false, animation:false, baseLayerPicker:false, geocoder:false,
-    homeButton:false, sceneModePicker:false, navigationHelpButton:false,
-    fullscreenButton:false, infoBox:false, selectionIndicator:false,
-    creditContainer: document.createElement('div'),
+    timeline:false,animation:false,baseLayerPicker:false,geocoder:false,
+    homeButton:false,sceneModePicker:false,navigationHelpButton:false,
+    fullscreenButton:false,infoBox:false,selectionIndicator:false,
+    creditContainer:document.createElement('div'),
   });
 
-  // Google 3D Tiles with terrain fallback
   try {
     const tileset = await Cesium.createGooglePhotorealistic3DTileset();
     viewer.scene.primitives.add(tileset);
-  } catch(e) {
+  } catch(e){
     console.warn('Google 3D Tiles unavailable, using world terrain');
     viewer.terrainProvider = await Cesium.createWorldTerrainAsync();
   }
@@ -262,19 +255,19 @@ async function initCesium() {
 
   handler.setInputAction(click => {
     if(mode==='idle'){
-      const picked = viewer.scene.pick(click.position);
+      const picked=viewer.scene.pick(click.position);
       if(Cesium.defined(picked)&&picked.id){
-        const ent = picked.id;
+        const ent=picked.id;
         if(ent._sType==='asset') showAsset(ent._sRecord);
         else if(ent._sType==='note') showNoteInfo(ent._sNote);
       } else { hideAsset(); }
       return;
     }
-    const cart = viewer.scene.pickPosition(click.position);
+    const cart=viewer.scene.pickPosition(click.position);
     if(!cart) return;
-    const cg = Cesium.Cartographic.fromCartesian(cart);
-    const lat = Cesium.Math.toDegrees(cg.latitude);
-    const lng = Cesium.Math.toDegrees(cg.longitude);
+    const cg=Cesium.Cartographic.fromCartesian(cart);
+    const lat=Cesium.Math.toDegrees(cg.latitude);
+    const lng=Cesium.Math.toDegrees(cg.longitude);
     if(mode==='measure') addMeasPt(lat,lng,cart);
     else if(mode==='draw_polygon'||mode==='draw_polyline') addDrawPt(lat,lng,cart);
     else if(mode==='note'){
@@ -286,19 +279,18 @@ async function initCesium() {
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
   handler.setInputAction(click => {
-    const cart = viewer.scene.pickPosition(click.position);
+    const cart=viewer.scene.pickPosition(click.position);
     if(!cart) return;
-    const cg = Cesium.Cartographic.fromCartesian(cart);
-    post({type:'RIGHT_CLICK', lat:Cesium.Math.toDegrees(cg.latitude), lng:Cesium.Math.toDegrees(cg.longitude)});
+    const cg=Cesium.Cartographic.fromCartesian(cart);
+    post({type:'RIGHT_CLICK',lat:Cesium.Math.toDegrees(cg.latitude),lng:Cesium.Math.toDegrees(cg.longitude)});
   }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 
   viewer.camera.changed.addEventListener(()=>{
-    const p = viewer.camera.positionCartographic;
-    post({type:'CAMERA_STATE', lat:Cesium.Math.toDegrees(p.latitude), lng:Cesium.Math.toDegrees(p.longitude), height:p.height});
+    const p=viewer.camera.positionCartographic;
+    post({type:'CAMERA_STATE',lat:Cesium.Math.toDegrees(p.latitude),lng:Cesium.Math.toDegrees(p.longitude),height:p.height});
   });
 }
 
-// ── Measure ────────────────────────────────────────────────────────────────
 function addMeasPt(lat,lng,cart){
   measurePoints.push({lat,lng,cart});
   measureEntities.push(viewer.entities.add({
@@ -306,11 +298,20 @@ function addMeasPt(lat,lng,cart){
     point:{pixelSize:8,color:Cesium.Color.fromCssColorString('#3b82f6'),outlineColor:Cesium.Color.WHITE,outlineWidth:1.5}
   }));
   if(measurePoints.length>=2){
-    const p1=measurePoints[measurePoints.length-2], p2=measurePoints[measurePoints.length-1];
+    const p1=measurePoints[measurePoints.length-2],p2=measurePoints[measurePoints.length-1];
     const d=hav(p1.lat,p1.lng,p2.lat,p2.lng);
-    const ml=(p1.lat+p2.lat)/2, mn=(p1.lng+p2.lng)/2;
-    measureEntities.push(viewer.entities.add({polyline:{positions:[p1.cart,p2.cart],width:2,material:new Cesium.PolylineDashMaterialProperty({color:Cesium.Color.fromCssColorString('#3b82f6')}),clampToGround:true}}));
-    measureEntities.push(viewer.entities.add({position:Cesium.Cartesian3.fromDegrees(mn,ml,5),label:{text:fmt(d),font:'600 12px Inter,sans-serif',fillColor:Cesium.Color.WHITE,outlineColor:Cesium.Color.fromCssColorString('#1e3a5f'),outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-14),disableDepthTestDistance:Number.POSITIVE_INFINITY}}));
+    const ml=(p1.lat+p2.lat)/2,mn=(p1.lng+p2.lng)/2;
+    measureEntities.push(viewer.entities.add({
+      polyline:{positions:[p1.cart,p2.cart],width:2,
+        material:new Cesium.PolylineDashMaterialProperty({color:Cesium.Color.fromCssColorString('#3b82f6')}),
+        clampToGround:true}
+    }));
+    measureEntities.push(viewer.entities.add({
+      position:Cesium.Cartesian3.fromDegrees(mn,ml,5),
+      label:{text:fmt(d),font:'600 12px Inter,sans-serif',fillColor:Cesium.Color.WHITE,
+        outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+        showBackground:false,disableDepthTestDistance:Number.POSITIVE_INFINITY}
+    }));
     let total=0;
     for(let i=1;i<measurePoints.length;i++) total+=hav(measurePoints[i-1].lat,measurePoints[i-1].lng,measurePoints[i].lat,measurePoints[i].lng);
     document.getElementById('measureTotal').textContent=fmt(total);
@@ -318,49 +319,65 @@ function addMeasPt(lat,lng,cart){
     post({type:'MEASURE_UPDATE',distance:fmt(total),points:measurePoints.length});
   }
 }
+
 function clearMeasure(){
   measureEntities.forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
   measureEntities=[]; measurePoints=[];
   document.getElementById('measureTotal').textContent='—';
   document.getElementById('measureCount').textContent='0 points placed';
 }
-document.getElementById('measureClearBtn').addEventListener('click',()=>{clearMeasure();setMode('idle');post({type:'MODE_CHANGE',mode:'idle'});});
+document.getElementById('measureClearBtn').addEventListener('click',()=>{
+  clearMeasure(); setMode('idle'); post({type:'MODE_CHANGE',mode:'idle'});
+});
 
-// ── Draw ───────────────────────────────────────────────────────────────────
 function addDrawPt(lat,lng,cart){
   drawPoints.push({lat,lng,cart});
-  drawEntities.push(viewer.entities.add({position:Cesium.Cartesian3.fromDegrees(lng,lat,2),point:{pixelSize:7,color:Cesium.Color.fromCssColorString('#ef4444'),outlineColor:Cesium.Color.WHITE,outlineWidth:1.5}}));
+  drawEntities.push(viewer.entities.add({
+    position:Cesium.Cartesian3.fromDegrees(lng,lat,2),
+    point:{pixelSize:7,color:Cesium.Color.fromCssColorString('#ef4444'),outlineColor:Cesium.Color.WHITE,outlineWidth:1.5}
+  }));
   if(drawPoints.length>=2){
     drawEntities.filter(e=>e._dp).forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
     drawEntities=drawEntities.filter(e=>!e._dp);
     const pos=drawPoints.map(p=>p.cart);
-    const prev=drawType==='polygon'?[...pos,pos[0]]:pos;
-    const line=viewer.entities.add({polyline:{positions:prev,width:2,material:Cesium.Color.fromCssColorString('#ef4444').withAlpha(0.7),clampToGround:true}});
+    const pts=drawType==='polygon'?[...pos,pos[0]]:pos;
+    const line=viewer.entities.add({
+      polyline:{positions:pts,width:2,
+        material:Cesium.Color.fromCssColorString('#ef4444').withAlpha(0.7),clampToGround:true}
+    });
     line._dp=true; drawEntities.push(line);
   }
   document.getElementById('drawPointCount').textContent=`${drawPoints.length} point${drawPoints.length!==1?'s':''} placed`;
 }
+
 function clearDraw(){
   drawEntities.forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
   drawEntities=[]; drawPoints=[];
   document.getElementById('drawPointCount').textContent='0 points — click to add vertices';
 }
+
 document.getElementById('drawUndoBtn').addEventListener('click',()=>{
   if(!drawPoints.length) return;
   const pts=[...drawPoints]; clearDraw();
   pts.slice(0,-1).forEach(p=>addDrawPt(p.lat,p.lng,p.cart));
 });
-document.getElementById('drawCancelBtn').addEventListener('click',()=>{clearDraw();setMode('idle');document.getElementById('drawPanel').classList.remove('visible');post({type:'MODE_CHANGE',mode:'idle'});});
+document.getElementById('drawCancelBtn').addEventListener('click',()=>{
+  clearDraw(); setMode('idle');
+  document.getElementById('drawPanel').classList.remove('visible');
+  post({type:'MODE_CHANGE',mode:'idle'});
+});
 document.getElementById('drawFinishBtn').addEventListener('click',()=>{
   if(drawPoints.length<2) return;
   post({type:'DRAW_COMPLETE',shapeType:drawType,coordinates:drawPoints.map(p=>({lat:p.lat,lng:p.lng})),projectId});
-  clearDraw();setMode('idle');document.getElementById('drawPanel').classList.remove('visible');
+  clearDraw(); setMode('idle');
+  document.getElementById('drawPanel').classList.remove('visible');
 });
 
-// ── Note ───────────────────────────────────────────────────────────────────
 document.getElementById('noteCancelBtn').addEventListener('click',()=>{
-  pendingNote=null; document.getElementById('notePanel').classList.remove('visible');
-  document.getElementById('noteTitle').value=''; document.getElementById('noteContent').value='';
+  pendingNote=null;
+  document.getElementById('notePanel').classList.remove('visible');
+  document.getElementById('noteTitle').value='';
+  document.getElementById('noteContent').value='';
   post({type:'MODE_CHANGE',mode:'idle'});
 });
 document.getElementById('noteSaveBtn').addEventListener('click',()=>{
@@ -368,16 +385,16 @@ document.getElementById('noteSaveBtn').addEventListener('click',()=>{
   const content=document.getElementById('noteContent').value.trim();
   if(!content){ document.getElementById('noteContent').style.borderColor='#ef4444'; return; }
   const title=document.getElementById('noteTitle').value.trim();
+  const savedNote={lat:pendingNote.lat,lng:pendingNote.lng,title,content};
   post({type:'SAVE_NOTE',lat:pendingNote.lat,lng:pendingNote.lng,title,content,projectId});
   document.getElementById('notePanel').classList.remove('visible');
-  document.getElementById('noteTitle').value=''; document.getElementById('noteContent').value='';
+  document.getElementById('noteTitle').value='';
+  document.getElementById('noteContent').value='';
   pendingNote=null;
-  // Add temporary note marker immediately
-  addNoteMarker({lat:pendingNote?.lat||0,lng:pendingNote?.lng||0,title,content});
+  addNoteMarker(savedNote);
   post({type:'MODE_CHANGE',mode:'idle'});
 });
 
-// ── Asset panel ────────────────────────────────────────────────────────────
 function showAsset(r){
   selectedRecord=r;
   document.getElementById('assetTag').textContent=r.asset_tag_number||'Asset';
@@ -388,51 +405,69 @@ function showAsset(r){
   const rad=r.zone_radius_m||DEFAULT_ZONE_RADIUS[r.zone_classification];
   document.getElementById('assetRadius').textContent=rad?`${rad} m`:'—';
   document.getElementById('assetLocation').textContent=r.latitude?`${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}`:'—';
-  if(r.notes){document.getElementById('assetNoteRow').style.display='flex';document.getElementById('assetNotes').textContent=r.notes;}
-  else{document.getElementById('assetNoteRow').style.display='none';}
+  if(r.notes){ document.getElementById('assetNoteRow').style.display='flex'; document.getElementById('assetNotes').textContent=r.notes; }
+  else { document.getElementById('assetNoteRow').style.display='none'; }
+  document.getElementById('assetEditBtn').style.display='';
   document.getElementById('assetPanel').classList.add('visible');
   post({type:'ASSET_SELECTED',recordId:r.id});
 }
-function hideAsset(){document.getElementById('assetPanel').classList.remove('visible');selectedRecord=null;}
+function hideAsset(){ document.getElementById('assetPanel').classList.remove('visible'); selectedRecord=null; }
 function showNoteInfo(n){
   selectedRecord=null;
   document.getElementById('assetTag').textContent=n.title||'Note';
   document.getElementById('assetEquipType').textContent=n.content||'—';
-  document.getElementById('assetZone').textContent='—'; document.getElementById('assetHazard').textContent='—';
-  document.getElementById('assetTrade').textContent='—'; document.getElementById('assetRadius').textContent='—';
+  document.getElementById('assetZone').textContent='—';
+  document.getElementById('assetHazard').textContent='—';
+  document.getElementById('assetTrade').textContent='—';
+  document.getElementById('assetRadius').textContent='—';
   document.getElementById('assetLocation').textContent=`${n.lat.toFixed(5)}, ${n.lng.toFixed(5)}`;
   document.getElementById('assetNoteRow').style.display='none';
   document.getElementById('assetEditBtn').style.display='none';
   document.getElementById('assetPanel').classList.add('visible');
 }
-document.getElementById('assetCloseBtn').addEventListener('click',()=>{hideAsset();document.getElementById('assetEditBtn').style.display='';});
+document.getElementById('assetCloseBtn').addEventListener('click',()=>{
+  hideAsset(); document.getElementById('assetEditBtn').style.display='';
+});
 document.getElementById('assetEditBtn').addEventListener('click',()=>{
   if(selectedRecord) post({type:'EDIT_RECORD',recordId:selectedRecord.id,projectId});
 });
 
-// ── Layer visibility ───────────────────────────────────────────────────────
 function applyLayers(){
   groups.assets.forEach(e=>e.show=layers.assets);
   groups.hazardZones.forEach(e=>e.show=layers.hazardZones);
   groups.notes.forEach(e=>e.show=layers.notes!==false);
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
+function pinSvg(color){
+  const s=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"><path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 26 16 26s16-14 16-26C32 7.16 24.84 0 16 0z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="16" cy="16" r="5" fill="white" opacity="0.4"/></svg>`;
+  return `data:image/svg+xml;base64,${btoa(s)}`;
+}
+function noteSvg(){
+  const s=`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/><text x="14" y="19" font-size="16" font-weight="bold" fill="white" text-anchor="middle">N</text></svg>`;
+  return `data:image/svg+xml;base64,${btoa(s)}`;
+}
+
 function renderRecords(records){
   records.filter(r=>r.latitude!=null&&r.longitude!=null).forEach(r=>{
     const color=PIN_COLOR[r.zone_classification]||PIN_COLOR.default;
     const pin=viewer.entities.add({
       position:Cesium.Cartesian3.fromDegrees(r.longitude,r.latitude,3),
       billboard:{image:pinSvg(color),width:32,height:42,verticalOrigin:Cesium.VerticalOrigin.BOTTOM,disableDepthTestDistance:Number.POSITIVE_INFINITY},
-      label:{text:r.asset_tag_number||'',font:'600 11px Inter,sans-serif',fillColor:Cesium.Color.WHITE,outlineColor:Cesium.Color.fromCssColorString('#0f172a'),outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-46),disableDepthTestDistance:Number.POSITIVE_INFINITY}
+      label:{text:r.asset_tag_number||'',font:'600 11px Inter,sans-serif',fillColor:Cesium.Color.WHITE,
+        outlineColor:Cesium.Color.fromCssColorString('#0f172a'),outlineWidth:2,
+        style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-46),
+        disableDepthTestDistance:Number.POSITIVE_INFINITY}
     });
     pin._sType='asset'; pin._sRecord=r; groups.assets.push(pin);
     if(r.zone_classification&&ZONE_FILL[r.zone_classification]){
-      const [r2,g,b,a]=ZONE_FILL[r.zone_classification];
+      const [rv,g,b,a]=ZONE_FILL[r.zone_classification];
       const rad=r.zone_radius_m||DEFAULT_ZONE_RADIUS[r.zone_classification]||3;
       const ell=viewer.entities.add({
         position:Cesium.Cartesian3.fromDegrees(r.longitude,r.latitude,1),
-        ellipse:{semiMajorAxis:rad,semiMinorAxis:rad,material:new Cesium.Color(r2/255,g/255,b/255,a),outline:true,outlineColor:Cesium.Color.fromCssColorString(ZONE_OUTLINE[r.zone_classification]||'#fff'),outlineWidth:2,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND}
+        ellipse:{semiMajorAxis:rad,semiMinorAxis:rad,
+          material:new Cesium.Color(rv/255,g/255,b/255,a),
+          outline:true,outlineColor:Cesium.Color.fromCssColorString(ZONE_OUTLINE[r.zone_classification]||'#ffffff'),
+          outlineWidth:1}
       });
       ell._sType='zone'; groups.hazardZones.push(ell);
     }
@@ -458,14 +493,23 @@ function renderShapes(shapes){
     const pos=s.coordinates.map(p=>Cesium.Cartesian3.fromDegrees(p.lng,p.lat,1));
     if(s.type==='polygon'){
       const poly=viewer.entities.add({
-        polygon:{hierarchy:new Cesium.PolygonHierarchy(pos),material:c.withAlpha(s.is_boundary?0.1:0.12),outline:true,outlineColor:c,outlineWidth:s.is_boundary?2.5:1.5,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND},
-        polyline:{positions:[...pos,pos[0]],width:s.is_boundary?2:1.5,material:s.is_boundary?new Cesium.PolylineDashMaterialProperty({color:c,dashLength:10}):c,clampToGround:true}
+        polygon:{hierarchy:new Cesium.PolygonHierarchy(pos),material:c.withAlpha(s.is_boundary?0.1:0.12),
+          outline:true,outlineColor:c,outlineWidth:s.is_boundary?2.5:1.5,
+          heightReference:Cesium.HeightReference.NONE},
+        polyline:{positions:[...pos,pos[0]],width:s.is_boundary?2:1.5,
+          material:s.is_boundary?new Cesium.PolylineDashMaterialProperty({color:c,dashLength:10}):c,
+          clampToGround:true}
       });
       groups.shapes.push(poly);
     } else if(s.type==='polyline'){
-      groups.shapes.push(viewer.entities.add({polyline:{positions:pos,width:2,material:c,clampToGround:true}}));
+      groups.shapes.push(viewer.entities.add({
+        polyline:{positions:pos,width:2,material:c,clampToGround:true}
+      }));
     } else if(s.type==='marker'){
-      groups.shapes.push(viewer.entities.add({position:pos[0],point:{pixelSize:10,color:c,outlineColor:Cesium.Color.WHITE,outlineWidth:2}}));
+      groups.shapes.push(viewer.entities.add({
+        position:pos[0],
+        point:{pixelSize:10,color:c,outlineColor:Cesium.Color.WHITE,outlineWidth:2}
+      }));
     }
   });
 }
@@ -473,69 +517,56 @@ function renderShapes(shapes){
 function flyToData(records,shapes){
   const boundary=shapes.find(s=>s.is_boundary);
   if(boundary&&boundary.coordinates.length>0){
-    const lats=boundary.coordinates.map(c=>c.lat), lngs=boundary.coordinates.map(c=>c.lng);
+    const lats=boundary.coordinates.map(c=>c.lat),lngs=boundary.coordinates.map(c=>c.lng);
     flyTo((Math.min(...lats)+Math.max(...lats))/2,(Math.min(...lngs)+Math.max(...lngs))/2,300);
     return;
   }
   const pts=records.filter(r=>r.latitude!=null&&r.longitude!=null);
-  if(pts.length>0) flyTo(pts.reduce((s,r)=>s+r.latitude,0)/pts.length,pts.reduce((s,r)=>s+r.longitude,0)/pts.length,300);
+  if(pts.length>0){
+    flyTo(
+      pts.reduce((s,r)=>s+r.latitude,0)/pts.length,
+      pts.reduce((s,r)=>s+r.longitude,0)/pts.length,
+      300
+    );
+  }
 }
 
-// ── SVGs ───────────────────────────────────────────────────────────────────
-function pinSvg(color){
-  const s=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"><path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 26 16 26s16-14 16-26C32 7.16 24.84 0 16 0z" fill="${color}" stroke="#fff" stroke-width="1.5"/><circle cx="16" cy="16" r="6" fill="white" fill-opacity="0.9"/></svg>`;
-  return `data:image/svg+xml;base64,${btoa(s)}`;
-}
-function noteSvg(){
-  const s=`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/><text x="14" y="20" font-size="14" text-anchor="middle" fill="white">📝</text></svg>`;
-  return `data:image/svg+xml;base64,${btoa(s)}`;
-}
-
-// ── Load data ──────────────────────────────────────────────────────────────
 async function loadData(){
   if(!projectId) return;
   document.getElementById('loadingText').textContent='Loading project data…';
-  // Clear existing
   Object.values(groups).flat().forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
   Object.keys(groups).forEach(k=>groups[k]=[]);
-
   try {
-    const resp = await fetch(DATA_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId }),
+    const resp=await fetch(DATA_API,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({projectId}),
     });
-    const data = await resp.json();
+    const data=await resp.json();
     renderRecords(data.records||[]);
     renderNotes(data.notes||[]);
     renderShapes(data.shapes||[]);
     applyLayers();
-    flyToData(data.records||[], data.shapes||[]);
+    flyToData(data.records||[],data.shapes||[]);
     post({type:'DATA_LOADED',recordCount:(data.records||[]).length,noteCount:(data.notes||[]).length,shapeCount:(data.shapes||[]).length});
   } catch(err){
-    console.error('Data load error:', err);
+    console.error('Data load error:',err);
     post({type:'DATA_ERROR',error:err.message});
   }
   document.getElementById('loadingOverlay').classList.add('hidden');
 }
 
-// ── Boot ───────────────────────────────────────────────────────────────────
 (async()=>{
   const params=new URLSearchParams(window.location.search);
   projectId=params.get('projectId');
-
   await initCesium();
-
   if(!projectId){
     document.getElementById('loadingOverlay').classList.add('hidden');
     document.getElementById('errorPanel').classList.add('visible');
     post({type:'READY',projectId:null});
     return;
   }
-
-  // Hide loading after max 5s regardless
-  setTimeout(()=>document.getElementById('loadingOverlay').classList.add('hidden'),5000);
-
+  setTimeout(()=>document.getElementById('loadingOverlay').classList.add('hidden'),8000);
   await loadData();
   post({type:'READY',projectId});
 })();
