@@ -1,1 +1,52 @@
-<!DOCTYPE html>\n<html lang='en'>\n<head>\n    <meta charset='UTF-8'>\n    <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n    <title>3D View</title>\n    <link rel='stylesheet' href='styles.css'>\n</head>\n<body>\n    <script src='https://cesium.com/downloads/cesiumjs/releases/1.85/Build/Cesium/Cesium.js'></script>\n    <script>\n        const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmYzY2MWZkNi0wZTY1LTQ5MmQtYjVlYi02Njk2ODBiZDcyN2MiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY2MDA2Mzl9.nFohVpwcL5-nA1ObMbiFgyJFV6-EaNNqa3A4_3p3y4E';\n        function hav(lat1,lng1,lat2,lng2){const R=6371000,d2r=Math.PI/180,dL=(lat2-lat1)*d2r,dN=(lng2-lng1)*d2r,a=Math.sin(dL/2)**2+Math.cos(lat1*d2r)*Math.cos(lat2*d2r)*Math.sin(dN/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}\n        // ... (Rest of the JavaScript code)\n        draw({\n            type: 'measurement',\n            clampToGround: true,\n            outlineColor: Cesium.Color.BLACK,\n            outlineWidth: 1.5,\n            complete: post({type:'MODE_CHANGE',mode:'idle'})\n        });\n        // SVG for pin and note\n        const pinSVG = "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><path stroke='white' stroke-width='1'/><circle cx='16' cy='16' r='7' fill='white' opacity='0.3'/></svg>";\n        const noteSVG = "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><text font-size='14' font-weight='bold' fill='white' text-anchor='middle'>📝</text></svg>";\n        // ... (More code)\n    <\/script>\n</body>\n</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cesium 3D Viewer</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/release/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/release/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer" style="width: 100%; height: 100%;"></div>
+    <script>
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+            clampToGround: true,
+            sceneMode: Cesium.SceneMode.COLUMBUS_VIEW,
+            selectionIndicator: false,
+        });
+
+        const CESIUM_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmYzY2MWZkNi0wZTY1LTQ5MmQtYjVlYi02Njk2ODBiZDcyN2MiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY2MDA2Mzl9.nFohVpwcL5-nA1ObMbiFgyJFV6-EaNNqa3A4_3p3y4E";
+
+        // Haversine function for distance calculation
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius of the Earth in kilometers
+            const dLat = this.toRad(lat2 - lat1);
+            const dLon = this.toRad(lon2 - lon1);
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        // SVG functions with full paths
+        function drawSvgPath() {
+            const svgNamespace = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(svgNamespace, "svg");
+            const path = document.createElementNS(svgNamespace, "path");
+            path.setAttribute('d', 'M10 10 H 90 V 90 H 10 L 10 10'); // Example path
+            svg.appendChild(path);
+            document.body.appendChild(svg);
+        }
+    </script>
+</body>
+</html>
