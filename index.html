@@ -8,37 +8,149 @@
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #cesiumContainer { width: 100%; height: 100%; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; background: #0d1117; }
+    html, body, #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0d1117;
+    }
 
     #loadingOverlay {
-      position: fixed; inset: 0; background: #0d1117; display: flex;
-      flex-direction: column; align-items: center; justify-content: center;
-      z-index: 9999; color: #e2e8f0; gap: 16px; transition: opacity 0.6s;
+      position: fixed;
+      inset: 0;
+      background: #0d1117;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: #e2e8f0;
+      gap: 16px;
+      transition: opacity 0.6s;
     }
     #loadingOverlay.hidden { opacity: 0; pointer-events: none; }
-    .spinner { width: 40px; height: 40px; border: 3px solid #334155; border-top-color: #e11d48; border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #334155;
+      border-top-color: #e11d48;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
     #loadingText { font-size: 13px; color: #94a3b8; }
 
-    .cesium-viewer-bottom, .cesium-viewer-toolbar, .cesium-viewer-animationContainer,
-    .cesium-viewer-timelineContainer, .cesium-viewer-fullscreenContainer,
-    .cesium-viewer-vrContainer, .cesium-infoBox, .cesium-selection-wrapper { display: none !important; }
+    .cesium-viewer-bottom,
+    .cesium-viewer-toolbar,
+    .cesium-viewer-animationContainer,
+    .cesium-viewer-timelineContainer,
+    .cesium-viewer-fullscreenContainer,
+    .cesium-viewer-vrContainer,
+    .cesium-infoBox,
+    .cesium-selection-wrapper {
+      display: none !important;
+    }
+
+    /* Persistent toolbar */
+    #topToolbar {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 1200;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+    }
+
+    #brandBlock {
+      display: flex;
+      flex-direction: column;
+      min-width: 170px;
+      margin-right: 8px;
+    }
+
+    #brandTitle {
+      color: #f1f5f9;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    #brandSub {
+      color: #94a3b8;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    #toolbarButtons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toolBtn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+    .toolBtn:hover {
+      background: #334155;
+    }
+    .toolBtn.active {
+      background: #b91c1c;
+      border-color: #ef4444;
+      color: white;
+    }
 
     #modeBanner {
-      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-      background: rgba(30,41,59,0.95); color: #e2e8f0; font-size: 12px; font-weight: 600;
-      padding: 8px 20px; border-radius: 999px; z-index: 800;
-      pointer-events: none; display: none;
-      border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(8px);
+      position: fixed;
+      top: 88px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30,41,59,0.95);
+      color: #e2e8f0;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 20px;
+      border-radius: 999px;
+      z-index: 1000;
+      pointer-events: none;
+      display: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(8px);
     }
     #modeBanner.visible { display: block; }
 
     #measurePanel {
-      position: fixed; bottom: 70px; left: 16px;
-      background: rgba(15,23,42,0.92); color: #e2e8f0;
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
-      padding: 12px 16px; font-size: 12px; z-index: 700; min-width: 180px;
-      display: none; backdrop-filter: blur(8px);
+      position: fixed;
+      top: 124px;
+      left: 16px;
+      background: rgba(15,23,42,0.92);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 12px;
+      z-index: 1000;
+      min-width: 180px;
+      display: none;
+      backdrop-filter: blur(8px);
     }
     #measurePanel.visible { display: block; }
     #measurePanel strong { display: block; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
@@ -48,11 +160,19 @@
     #measureClearBtn:hover { background: #334155; color: #e2e8f0; }
 
     #drawPanel {
-      position: fixed; bottom: 70px; left: 16px;
-      background: rgba(15,23,42,0.92); color: #e2e8f0;
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
-      padding: 12px 16px; font-size: 12px; z-index: 700; min-width: 220px;
-      display: none; backdrop-filter: blur(8px);
+      position: fixed;
+      top: 124px;
+      left: 16px;
+      background: rgba(15,23,42,0.92);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 12px;
+      z-index: 1000;
+      min-width: 220px;
+      display: none;
+      backdrop-filter: blur(8px);
     }
     #drawPanel.visible { display: block; }
     #drawPanel strong { display: block; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
@@ -63,16 +183,35 @@
     .drawBtn.primary:hover { background: #2563eb; }
 
     #notePanel {
-      position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
-      background: rgba(15,23,42,0.96); color: #e2e8f0;
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 12px;
-      padding: 16px; font-size: 12px; z-index: 700; width: 300px;
-      display: none; backdrop-filter: blur(8px);
+      position: fixed;
+      top: 124px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15,23,42,0.96);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 12px;
+      z-index: 1000;
+      width: 300px;
+      display: none;
+      backdrop-filter: blur(8px);
     }
     #notePanel.visible { display: block; }
     #notePanel strong { display: block; margin-bottom: 10px; font-size: 13px; }
     #noteCoords { font-size: 10px; color: #64748b; margin-bottom: 8px; }
-    #noteTitle, #noteContent { width: 100%; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px; padding: 6px 8px; font-size: 12px; margin-bottom: 8px; font-family: inherit; }
+    #noteTitle, #noteContent {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      margin-bottom: 8px;
+      font-family: inherit;
+    }
     #noteContent { height: 70px; resize: vertical; }
     .noteActions { display: flex; gap: 6px; }
     .noteBtn { flex: 1; padding: 6px 0; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #334155; }
@@ -80,11 +219,19 @@
     #noteCancelBtn { background: #1e293b; color: #94a3b8; }
 
     #assetPanel {
-      position: fixed; right: 16px; top: 60px;
-      background: rgba(15,23,42,0.96); color: #e2e8f0;
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 12px;
-      padding: 16px; font-size: 12px; z-index: 700; width: 260px;
-      display: none; backdrop-filter: blur(8px);
+      position: fixed;
+      right: 16px;
+      top: 92px;
+      background: rgba(15,23,42,0.96);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 12px;
+      z-index: 1000;
+      width: 260px;
+      display: none;
+      backdrop-filter: blur(8px);
     }
     #assetPanel.visible { display: block; }
     #assetPanel h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: #f1f5f9; padding-right: 20px; }
@@ -93,23 +240,74 @@
     .assetValue { color: #e2e8f0; font-size: 11px; font-weight: 600; text-align: right; max-width: 150px; word-break: break-all; }
     #assetCloseBtn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #64748b; cursor: pointer; font-size: 18px; line-height: 1; }
     #assetCloseBtn:hover { color: #e2e8f0; }
-    #assetEditBtn { margin-top: 10px; width: 100%; background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 6px; padding: 6px; font-size: 11px; cursor: pointer; }
-    #assetEditBtn:hover { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
+    #assetEditBtn {
+      margin-top: 10px;
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    #assetEditBtn:hover {
+      background: #1d4ed8;
+      border-color: #3b82f6;
+      color: #fff;
+    }
 
     #errorPanel {
-      position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.5); z-index: 9998; color: #e2e8f0;
-      flex-direction: column; gap: 12px; text-align: center; padding: 32px;
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.5);
+      z-index: 9998;
+      color: #e2e8f0;
+      flex-direction: column;
+      gap: 12px;
+      text-align: center;
+      padding: 32px;
     }
     #errorPanel.visible { display: flex; }
-    #errorPanel .errorCard { background: rgba(15,23,42,0.97); border: 1px solid #334155; border-radius: 16px; padding: 32px; max-width: 400px; }
+    #errorPanel .errorCard {
+      background: rgba(15,23,42,0.97);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 400px;
+    }
     #errorPanel h2 { font-size: 18px; color: #f87171; margin-bottom: 8px; }
     #errorPanel p { font-size: 13px; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
-  <div id="loadingOverlay"><div class="spinner"></div><div id="loadingText">Loading Sentinel 3D view…</div></div>
+
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingText">Loading Sentinel 3D view…</div>
+  </div>
+
+  <div id="topToolbar">
+    <div id="brandBlock">
+      <div id="brandTitle">Sentinel GIS</div>
+      <div id="brandSub">3D Project View</div>
+    </div>
+
+    <div id="toolbarButtons">
+      <button class="toolBtn" id="btnBack">← Back</button>
+      <button class="toolBtn" id="btnHome">Home</button>
+      <button class="toolBtn" id="btnMeasure">Measure</button>
+      <button class="toolBtn" id="btnPolygon">Polygon</button>
+      <button class="toolBtn" id="btnLine">Line</button>
+      <button class="toolBtn" id="btnNote">Note</button>
+      <button class="toolBtn" id="btnReload">Reload</button>
+    </div>
+  </div>
+
   <div id="modeBanner"></div>
 
   <div id="measurePanel">
@@ -215,6 +413,13 @@ function flyTo(lat,lng,h=200){
   viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(lng,lat,h),duration:1.5});
 }
 
+function updateToolbarStates() {
+  document.getElementById('btnMeasure').classList.toggle('active', mode === 'measure');
+  document.getElementById('btnPolygon').classList.toggle('active', mode === 'draw_polygon');
+  document.getElementById('btnLine').classList.toggle('active', mode === 'draw_polyline');
+  document.getElementById('btnNote').classList.toggle('active', mode === 'note');
+}
+
 function setMode(m){
   mode=m;
   const msgs={
@@ -224,22 +429,43 @@ function setMode(m){
     note:'📝 Click anywhere on the scene to place note',
   };
   const banner=document.getElementById('modeBanner');
-  if(m!=='idle'&&msgs[m]){ banner.textContent=msgs[m]; banner.classList.add('visible'); }
-  else { banner.classList.remove('visible'); }
+
+  if(m!=='idle'&&msgs[m]){
+    banner.textContent=msgs[m];
+    banner.classList.add('visible');
+  } else {
+    banner.classList.remove('visible');
+  }
+
   document.getElementById('measurePanel').classList.toggle('visible',m==='measure');
   document.getElementById('drawPanel').classList.toggle('visible',m==='draw_polygon'||m==='draw_polyline');
+
   if(m==='draw_polygon') document.getElementById('drawTitle').textContent='⬡ Draw Polygon';
   if(m==='draw_polyline') document.getElementById('drawTitle').textContent='〰 Draw Line';
+
   if(m!=='measure') clearMeasure();
   if(m!=='draw_polygon'&&m!=='draw_polyline') clearDraw();
+
+  if(m!=='note'){
+    document.getElementById('notePanel').classList.remove('visible');
+  }
+
+  updateToolbarStates();
 }
 
 async function initCesium(){
   Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
   viewer = new Cesium.Viewer('cesiumContainer',{
-    timeline:false,animation:false,baseLayerPicker:false,geocoder:false,
-    homeButton:false,sceneModePicker:false,navigationHelpButton:false,
-    fullscreenButton:false,infoBox:false,selectionIndicator:false,
+    timeline:false,
+    animation:false,
+    baseLayerPicker:false,
+    geocoder:false,
+    homeButton:false,
+    sceneModePicker:false,
+    navigationHelpButton:false,
+    fullscreenButton:false,
+    infoBox:false,
+    selectionIndicator:false,
     creditContainer:document.createElement('div'),
   });
 
@@ -260,21 +486,24 @@ async function initCesium(){
         const ent=picked.id;
         if(ent._sType==='asset') showAsset(ent._sRecord);
         else if(ent._sType==='note') showNoteInfo(ent._sNote);
-      } else { hideAsset(); }
+      } else {
+        hideAsset();
+      }
       return;
     }
+
     const cart=viewer.scene.pickPosition(click.position);
     if(!cart) return;
     const cg=Cesium.Cartographic.fromCartesian(cart);
     const lat=Cesium.Math.toDegrees(cg.latitude);
     const lng=Cesium.Math.toDegrees(cg.longitude);
+
     if(mode==='measure') addMeasPt(lat,lng,cart);
     else if(mode==='draw_polygon'||mode==='draw_polyline') addDrawPt(lat,lng,cart);
     else if(mode==='note'){
       pendingNote={lat,lng};
       document.getElementById('noteCoords').textContent=`📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       document.getElementById('notePanel').classList.add('visible');
-      setMode('idle');
     }
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
@@ -326,8 +555,11 @@ function clearMeasure(){
   document.getElementById('measureTotal').textContent='—';
   document.getElementById('measureCount').textContent='0 points placed';
 }
+
 document.getElementById('measureClearBtn').addEventListener('click',()=>{
-  clearMeasure(); setMode('idle'); post({type:'MODE_CHANGE',mode:'idle'});
+  clearMeasure();
+  setMode('idle');
+  post({type:'MODE_CHANGE',mode:'idle'});
 });
 
 function addDrawPt(lat,lng,cart){
@@ -358,18 +590,23 @@ function clearDraw(){
 
 document.getElementById('drawUndoBtn').addEventListener('click',()=>{
   if(!drawPoints.length) return;
-  const pts=[...drawPoints]; clearDraw();
+  const pts=[...drawPoints];
+  clearDraw();
   pts.slice(0,-1).forEach(p=>addDrawPt(p.lat,p.lng,p.cart));
 });
+
 document.getElementById('drawCancelBtn').addEventListener('click',()=>{
-  clearDraw(); setMode('idle');
+  clearDraw();
+  setMode('idle');
   document.getElementById('drawPanel').classList.remove('visible');
   post({type:'MODE_CHANGE',mode:'idle'});
 });
+
 document.getElementById('drawFinishBtn').addEventListener('click',()=>{
   if(drawPoints.length<2) return;
   post({type:'DRAW_COMPLETE',shapeType:drawType,coordinates:drawPoints.map(p=>({lat:p.lat,lng:p.lng})),projectId});
-  clearDraw(); setMode('idle');
+  clearDraw();
+  setMode('idle');
   document.getElementById('drawPanel').classList.remove('visible');
 });
 
@@ -378,12 +615,17 @@ document.getElementById('noteCancelBtn').addEventListener('click',()=>{
   document.getElementById('notePanel').classList.remove('visible');
   document.getElementById('noteTitle').value='';
   document.getElementById('noteContent').value='';
+  setMode('idle');
   post({type:'MODE_CHANGE',mode:'idle'});
 });
+
 document.getElementById('noteSaveBtn').addEventListener('click',()=>{
   if(!pendingNote) return;
   const content=document.getElementById('noteContent').value.trim();
-  if(!content){ document.getElementById('noteContent').style.borderColor='#ef4444'; return; }
+  if(!content){
+    document.getElementById('noteContent').style.borderColor='#ef4444';
+    return;
+  }
   const title=document.getElementById('noteTitle').value.trim();
   const savedNote={lat:pendingNote.lat,lng:pendingNote.lng,title,content};
   post({type:'SAVE_NOTE',lat:pendingNote.lat,lng:pendingNote.lng,title,content,projectId});
@@ -392,6 +634,7 @@ document.getElementById('noteSaveBtn').addEventListener('click',()=>{
   document.getElementById('noteContent').value='';
   pendingNote=null;
   addNoteMarker(savedNote);
+  setMode('idle');
   post({type:'MODE_CHANGE',mode:'idle'});
 });
 
@@ -405,13 +648,22 @@ function showAsset(r){
   const rad=r.zone_radius_m||DEFAULT_ZONE_RADIUS[r.zone_classification];
   document.getElementById('assetRadius').textContent=rad?`${rad} m`:'—';
   document.getElementById('assetLocation').textContent=r.latitude?`${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}`:'—';
-  if(r.notes){ document.getElementById('assetNoteRow').style.display='flex'; document.getElementById('assetNotes').textContent=r.notes; }
-  else { document.getElementById('assetNoteRow').style.display='none'; }
+  if(r.notes){
+    document.getElementById('assetNoteRow').style.display='flex';
+    document.getElementById('assetNotes').textContent=r.notes;
+  } else {
+    document.getElementById('assetNoteRow').style.display='none';
+  }
   document.getElementById('assetEditBtn').style.display='';
   document.getElementById('assetPanel').classList.add('visible');
   post({type:'ASSET_SELECTED',recordId:r.id});
 }
-function hideAsset(){ document.getElementById('assetPanel').classList.remove('visible'); selectedRecord=null; }
+
+function hideAsset(){
+  document.getElementById('assetPanel').classList.remove('visible');
+  selectedRecord=null;
+}
+
 function showNoteInfo(n){
   selectedRecord=null;
   document.getElementById('assetTag').textContent=n.title||'Note';
@@ -425,9 +677,12 @@ function showNoteInfo(n){
   document.getElementById('assetEditBtn').style.display='none';
   document.getElementById('assetPanel').classList.add('visible');
 }
+
 document.getElementById('assetCloseBtn').addEventListener('click',()=>{
-  hideAsset(); document.getElementById('assetEditBtn').style.display='';
+  hideAsset();
+  document.getElementById('assetEditBtn').style.display='';
 });
+
 document.getElementById('assetEditBtn').addEventListener('click',()=>{
   if(selectedRecord) post({type:'EDIT_RECORD',recordId:selectedRecord.id,projectId});
 });
@@ -436,12 +691,14 @@ function applyLayers(){
   groups.assets.forEach(e=>e.show=layers.assets);
   groups.hazardZones.forEach(e=>e.show=layers.hazardZones);
   groups.notes.forEach(e=>e.show=layers.notes!==false);
+  groups.shapes.forEach(e=>e.show=true);
 }
 
 function pinSvg(color){
   const s=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"><path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 26 16 26s16-14 16-26C32 7.16 24.84 0 16 0z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="16" cy="16" r="5" fill="white" opacity="0.4"/></svg>`;
   return `data:image/svg+xml;base64,${btoa(s)}`;
 }
+
 function noteSvg(){
   const s=`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/><text x="14" y="19" font-size="16" font-weight="bold" fill="white" text-anchor="middle">N</text></svg>`;
   return `data:image/svg+xml;base64,${btoa(s)}`;
@@ -452,24 +709,44 @@ function renderRecords(records){
     const color=PIN_COLOR[r.zone_classification]||PIN_COLOR.default;
     const pin=viewer.entities.add({
       position:Cesium.Cartesian3.fromDegrees(r.longitude,r.latitude,3),
-      billboard:{image:pinSvg(color),width:32,height:42,verticalOrigin:Cesium.VerticalOrigin.BOTTOM,disableDepthTestDistance:Number.POSITIVE_INFINITY},
-      label:{text:r.asset_tag_number||'',font:'600 11px Inter,sans-serif',fillColor:Cesium.Color.WHITE,
-        outlineColor:Cesium.Color.fromCssColorString('#0f172a'),outlineWidth:2,
-        style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-46),
-        disableDepthTestDistance:Number.POSITIVE_INFINITY}
+      billboard:{
+        image:pinSvg(color),
+        width:32,
+        height:42,
+        verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
+        disableDepthTestDistance:Number.POSITIVE_INFINITY
+      },
+      label:{
+        text:r.asset_tag_number||'',
+        font:'600 11px Inter,sans-serif',
+        fillColor:Cesium.Color.WHITE,
+        outlineColor:Cesium.Color.fromCssColorString('#0f172a'),
+        outlineWidth:2,
+        style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset:new Cesium.Cartesian2(0,-46),
+        disableDepthTestDistance:Number.POSITIVE_INFINITY
+      }
     });
-    pin._sType='asset'; pin._sRecord=r; groups.assets.push(pin);
+    pin._sType='asset';
+    pin._sRecord=r;
+    groups.assets.push(pin);
+
     if(r.zone_classification&&ZONE_FILL[r.zone_classification]){
       const [rv,g,b,a]=ZONE_FILL[r.zone_classification];
       const rad=r.zone_radius_m||DEFAULT_ZONE_RADIUS[r.zone_classification]||3;
       const ell=viewer.entities.add({
         position:Cesium.Cartesian3.fromDegrees(r.longitude,r.latitude,1),
-        ellipse:{semiMajorAxis:rad,semiMinorAxis:rad,
+        ellipse:{
+          semiMajorAxis:rad,
+          semiMinorAxis:rad,
           material:new Cesium.Color(rv/255,g/255,b/255,a),
-          outline:true,outlineColor:Cesium.Color.fromCssColorString(ZONE_OUTLINE[r.zone_classification]||'#ffffff'),
-          outlineWidth:1}
+          outline:true,
+          outlineColor:Cesium.Color.fromCssColorString(ZONE_OUTLINE[r.zone_classification]||'#ffffff'),
+          outlineWidth:1
+        }
       });
-      ell._sType='zone'; groups.hazardZones.push(ell);
+      ell._sType='zone';
+      groups.hazardZones.push(ell);
     }
   });
 }
@@ -478,12 +755,22 @@ function addNoteMarker(n){
   if(n.lat==null||n.lng==null) return;
   const ne=viewer.entities.add({
     position:Cesium.Cartesian3.fromDegrees(n.lng,n.lat,3),
-    billboard:{image:noteSvg(),width:28,height:28,verticalOrigin:Cesium.VerticalOrigin.BOTTOM,disableDepthTestDistance:Number.POSITIVE_INFINITY}
+    billboard:{
+      image:noteSvg(),
+      width:28,
+      height:28,
+      verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
+      disableDepthTestDistance:Number.POSITIVE_INFINITY
+    }
   });
-  ne._sType='note'; ne._sNote=n; groups.notes.push(ne);
+  ne._sType='note';
+  ne._sNote=n;
+  groups.notes.push(ne);
 }
 
-function renderNotes(notes){ notes.filter(n=>n.lat!=null&&n.lng!=null).forEach(addNoteMarker); }
+function renderNotes(notes){
+  notes.filter(n=>n.lat!=null&&n.lng!=null).forEach(addNoteMarker);
+}
 
 function renderShapes(shapes){
   shapes.forEach(s=>{
@@ -491,14 +778,25 @@ function renderShapes(shapes){
     const hexColor=s.color||'#0d9488';
     const c=Cesium.Color.fromCssColorString(hexColor);
     const pos=s.coordinates.map(p=>Cesium.Cartesian3.fromDegrees(p.lng,p.lat,1));
+
     if(s.type==='polygon'){
       const poly=viewer.entities.add({
-        polygon:{hierarchy:new Cesium.PolygonHierarchy(pos),material:c.withAlpha(s.is_boundary?0.1:0.12),
-          outline:true,outlineColor:c,outlineWidth:s.is_boundary?2.5:1.5,
-          heightReference:Cesium.HeightReference.NONE},
-        polyline:{positions:[...pos,pos[0]],width:s.is_boundary?2:1.5,
-          material:s.is_boundary?new Cesium.PolylineDashMaterialProperty({color:c,dashLength:10}):c,
-          clampToGround:true}
+        polygon:{
+          hierarchy:new Cesium.PolygonHierarchy(pos),
+          material:c.withAlpha(s.is_boundary?0.1:0.12),
+          outline:true,
+          outlineColor:c,
+          outlineWidth:s.is_boundary?2.5:1.5,
+          heightReference:Cesium.HeightReference.NONE
+        },
+        polyline:{
+          positions:[...pos,pos[0]],
+          width:s.is_boundary?2:1.5,
+          material:s.is_boundary
+            ? new Cesium.PolylineDashMaterialProperty({color:c,dashLength:10})
+            : c,
+          clampToGround:true
+        }
       });
       groups.shapes.push(poly);
     } else if(s.type==='polyline'){
@@ -534,8 +832,10 @@ function flyToData(records,shapes){
 async function loadData(){
   if(!projectId) return;
   document.getElementById('loadingText').textContent='Loading project data…';
-  Object.values(groups).flat().forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
+
+  Object.values(groups).flat().forEach(e=>{ try{viewer.entities.remove(e);}catch(x){} });
   Object.keys(groups).forEach(k=>groups[k]=[]);
+
   try {
     const resp=await fetch(DATA_API,{
       method:'POST',
@@ -548,26 +848,72 @@ async function loadData(){
     renderShapes(data.shapes||[]);
     applyLayers();
     flyToData(data.records||[],data.shapes||[]);
-    post({type:'DATA_LOADED',recordCount:(data.records||[]).length,noteCount:(data.notes||[]).length,shapeCount:(data.shapes||[]).length});
+    post({
+      type:'DATA_LOADED',
+      recordCount:(data.records||[]).length,
+      noteCount:(data.notes||[]).length,
+      shapeCount:(data.shapes||[]).length
+    });
   } catch(err){
     console.error('Data load error:',err);
     post({type:'DATA_ERROR',error:err.message});
   }
+
   document.getElementById('loadingOverlay').classList.add('hidden');
 }
+
+/* Persistent toolbar actions */
+document.getElementById('btnBack').addEventListener('click', () => {
+  post({ type:'BACK' });
+  if (window.history.length > 1) window.history.back();
+});
+
+document.getElementById('btnHome').addEventListener('click', () => {
+  loadData();
+});
+
+document.getElementById('btnMeasure').addEventListener('click', () => {
+  setMode(mode === 'measure' ? 'idle' : 'measure');
+  post({type:'MODE_CHANGE',mode});
+});
+
+document.getElementById('btnPolygon').addEventListener('click', () => {
+  drawType = 'polygon';
+  setMode(mode === 'draw_polygon' ? 'idle' : 'draw_polygon');
+  post({type:'MODE_CHANGE',mode});
+});
+
+document.getElementById('btnLine').addEventListener('click', () => {
+  drawType = 'polyline';
+  setMode(mode === 'draw_polyline' ? 'idle' : 'draw_polyline');
+  post({type:'MODE_CHANGE',mode});
+});
+
+document.getElementById('btnNote').addEventListener('click', () => {
+  setMode(mode === 'note' ? 'idle' : 'note');
+  post({type:'MODE_CHANGE',mode});
+});
+
+document.getElementById('btnReload').addEventListener('click', () => {
+  loadData();
+});
 
 (async()=>{
   const params=new URLSearchParams(window.location.search);
   projectId=params.get('projectId');
+
   await initCesium();
+
   if(!projectId){
     document.getElementById('loadingOverlay').classList.add('hidden');
     document.getElementById('errorPanel').classList.add('visible');
     post({type:'READY',projectId:null});
     return;
   }
+
   setTimeout(()=>document.getElementById('loadingOverlay').classList.add('hidden'),8000);
   await loadData();
+  updateToolbarStates();
   post({type:'READY',projectId});
 })();
 </script>
