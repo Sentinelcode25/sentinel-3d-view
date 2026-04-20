@@ -446,17 +446,18 @@ let measurePoints=[], measureEntities=[];
 let drawPoints=[], drawEntities=[], drawType='polygon';
 let pendingNote=null, selectedRecord=null;
 
-const toRad = d => d * Math.PI / 180;
+function geodesicDistanceMeters(cartesian1, cartesian2) {
+  const carto1 = Cesium.Cartographic.fromCartesian(cartesian1);
+  const carto2 = Cesium.Cartographic.fromCartesian(cartesian2);
 
-function hav(lat1,lng1,lat2,lng2){
-  const R=6371000;
-  const dL=toRad(lat2-lat1), dN=toRad(lng2-lng1);
-  const a=Math.sin(dL/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dN/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  if (!carto1 || !carto2) return 0;
+
+  const geodesic = new Cesium.EllipsoidGeodesic(carto1, carto2);
+  return geodesic.surfaceDistance || 0;
 }
 
 function fmt(m){
-  return m>=1000?`${(m/1000).toFixed(2)} km`:`${Math.round(m)} m`;
+  return m>=1000 ? `${(m/1000).toFixed(2)} km` : `${m.toFixed(2)} m`;
 }
 
 function post(msg){
@@ -607,8 +608,10 @@ function addMeasPt(lat,lng,cart){
   if(measurePoints.length>=2){
     const p1=measurePoints[measurePoints.length-2];
     const p2=measurePoints[measurePoints.length-1];
-    const d=hav(p1.lat,p1.lng,p2.lat,p2.lng);
-    const ml=(p1.lat+p2.lat)/2, mn=(p1.lng+p2.lng)/2;
+    const d=geodesicDistanceMeters(p1.cart, p2.cart);
+
+    const ml=(p1.lat+p2.lat)/2;
+    const mn=(p1.lng+p2.lng)/2;
 
     measureEntities.push(viewer.entities.add({
       polyline:{
@@ -637,12 +640,7 @@ function addMeasPt(lat,lng,cart){
 
     let total=0;
     for(let i=1;i<measurePoints.length;i++){
-      total+=hav(
-        measurePoints[i-1].lat,
-        measurePoints[i-1].lng,
-        measurePoints[i].lat,
-        measurePoints[i].lng
-      );
+      total += geodesicDistanceMeters(measurePoints[i-1].cart, measurePoints[i].cart);
     }
 
     document.getElementById('measureTotal').textContent=fmt(total);
