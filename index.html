@@ -3,17 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sentinel GIS – 3D View</title>
+  <title>Ordinis HAZLOC GIS – 3D View</title>
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     html, body, #cesiumContainer {
       width: 100%;
       height: 100%;
       overflow: hidden;
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: Inter, system-ui, sans-serif;
       background: #0d1117;
     }
 
@@ -28,13 +27,9 @@
       z-index: 9999;
       color: #e2e8f0;
       gap: 16px;
-      transition: opacity 0.6s;
+      transition: opacity 0.4s ease;
     }
-
-    #loadingOverlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
+    #loadingOverlay.hidden { opacity: 0; pointer-events: none; }
 
     .spinner {
       width: 40px;
@@ -44,15 +39,9 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    #loadingText {
-      font-size: 13px;
-      color: #94a3b8;
-    }
+    #loadingText { font-size: 13px; color: #94a3b8; }
 
     .cesium-viewer-bottom,
     .cesium-viewer-toolbar,
@@ -67,300 +56,176 @@
 
     #modeBanner {
       position: fixed;
-      top: 24px;
+      top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(30,41,59,0.95);
-      color: #e2e8f0;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 8px 20px;
-      border-radius: 999px;
-      z-index: 800;
-      pointer-events: none;
-      display: none;
-      border: 1px solid rgba(255,255,255,0.1);
-      backdrop-filter: blur(8px);
-    }
-
-    #modeBanner.visible {
-      display: block;
-    }
-
-    #measurePanel {
-      position: fixed;
-      top: 24px;
-      left: 16px;
-      background: rgba(15,23,42,0.92);
+      background: rgba(15, 23, 42, 0.95);
       color: #e2e8f0;
       border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 10px;
-      padding: 12px 16px;
+      border-radius: 999px;
+      padding: 8px 18px;
+      z-index: 800;
       font-size: 12px;
+      font-weight: 600;
+      display: none;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+    #modeBanner.visible { display: block; }
+
+    #measurePanel, #drawPanel, #notePanel, #assetPanel {
+      position: fixed;
+      top: 20px;
+      background: rgba(15, 23, 42, 0.94);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 14px 16px;
       z-index: 700;
-      min-width: 180px;
       display: none;
       backdrop-filter: blur(8px);
     }
 
-    #measurePanel.visible {
+    #measurePanel { left: 16px; min-width: 260px; }
+    #drawPanel { left: 16px; min-width: 240px; }
+    #notePanel { left: 50%; transform: translateX(-50%); width: 320px; }
+    #assetPanel { right: 16px; width: 280px; }
+
+    #measurePanel.visible,
+    #drawPanel.visible,
+    #notePanel.visible,
+    #assetPanel.visible { display: block; }
+
+    #measurePanel strong,
+    #drawPanel strong,
+    #notePanel strong {
       display: block;
+      margin-bottom: 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
     }
 
-    #measurePanel strong {
-      display: block;
+    .measureRow, .assetRow {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
       margin-bottom: 6px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    }
+
+    .measureLabel, .assetLabel {
       color: #94a3b8;
+      font-size: 11px;
+    }
+
+    .measureValue, .assetValue {
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
+      word-break: break-word;
     }
 
     #measureTotal {
       font-size: 20px;
       font-weight: 700;
       color: #60a5fa;
-      margin-top: 4px;
+      margin: 8px 0 4px;
     }
 
-    #measureCount {
+    #measureCount, #drawPointCount, #noteCoords {
       font-size: 11px;
       color: #64748b;
-    }
-
-    #measureClearBtn {
-      margin-top: 8px;
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: #94a3b8;
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 11px;
-      cursor: pointer;
-    }
-
-    #measureClearBtn:hover {
-      background: #334155;
-      color: #e2e8f0;
-    }
-
-    #drawPanel {
-      position: fixed;
-      top: 24px;
-      left: 16px;
-      background: rgba(15,23,42,0.92);
-      color: #e2e8f0;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 12px;
-      z-index: 700;
-      min-width: 220px;
-      display: none;
-      backdrop-filter: blur(8px);
-    }
-
-    #drawPanel.visible {
-      display: block;
-    }
-
-    #drawPanel strong {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #94a3b8;
-    }
-
-    #drawPointCount {
-      color: #60a5fa;
       margin-bottom: 8px;
     }
 
-    .drawBtn {
+    button {
+      font: inherit;
+    }
+
+    .drawBtn, .panelBtn, #measureClearBtn, #assetEditBtn {
       background: #1e293b;
       border: 1px solid #334155;
-      color: #94a3b8;
-      border-radius: 6px;
-      padding: 4px 10px;
+      color: #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 10px;
       font-size: 11px;
       cursor: pointer;
-      margin-right: 4px;
     }
-
-    .drawBtn:hover {
+    .drawBtn:hover, .panelBtn:hover, #measureClearBtn:hover, #assetEditBtn:hover {
       background: #334155;
-      color: #e2e8f0;
+      color: #fff;
     }
-
     .drawBtn.primary {
       background: #1d4ed8;
       border-color: #3b82f6;
       color: #fff;
     }
-
     .drawBtn.primary:hover {
       background: #2563eb;
     }
 
-    #notePanel {
-      position: fixed;
-      top: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15,23,42,0.96);
-      color: #e2e8f0;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      padding: 16px;
-      font-size: 12px;
-      z-index: 700;
-      width: 300px;
-      display: none;
-      backdrop-filter: blur(8px);
-    }
-
-    #notePanel.visible {
-      display: block;
-    }
-
-    #notePanel strong {
-      display: block;
-      margin-bottom: 10px;
-      font-size: 13px;
-    }
-
-    #noteCoords {
-      font-size: 10px;
-      color: #64748b;
-      margin-bottom: 8px;
-    }
-
-    #noteTitle,
-    #noteContent {
+    #noteTitle, #noteContent {
       width: 100%;
       background: #1e293b;
       border: 1px solid #334155;
       color: #e2e8f0;
-      border-radius: 6px;
-      padding: 6px 8px;
+      border-radius: 8px;
+      padding: 8px;
       font-size: 12px;
       margin-bottom: 8px;
       font-family: inherit;
     }
-
     #noteContent {
-      height: 70px;
+      height: 80px;
       resize: vertical;
     }
-
     .noteActions {
       display: flex;
-      gap: 6px;
+      gap: 8px;
     }
-
     .noteBtn {
       flex: 1;
-      padding: 6px 0;
-      border-radius: 6px;
+      padding: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      cursor: pointer;
       font-size: 12px;
       font-weight: 600;
-      cursor: pointer;
-      border: 1px solid #334155;
     }
-
     #noteSaveBtn {
       background: #1d4ed8;
       border-color: #3b82f6;
       color: #fff;
     }
-
     #noteCancelBtn {
       background: #1e293b;
-      color: #94a3b8;
-    }
-
-    #assetPanel {
-      position: fixed;
-      right: 16px;
-      top: 24px;
-      background: rgba(15,23,42,0.96);
-      color: #e2e8f0;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      padding: 16px;
-      font-size: 12px;
-      z-index: 700;
-      width: 260px;
-      display: none;
-      backdrop-filter: blur(8px);
-    }
-
-    #assetPanel.visible {
-      display: block;
-    }
-
-    #assetPanel h3 {
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 10px;
-      color: #f1f5f9;
-      padding-right: 20px;
-    }
-
-    .assetRow {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 5px;
-    }
-
-    .assetLabel {
-      color: #64748b;
-      font-size: 11px;
-    }
-
-    .assetValue {
-      color: #e2e8f0;
-      font-size: 11px;
-      font-weight: 600;
-      text-align: right;
-      max-width: 150px;
-      word-break: break-all;
+      color: #cbd5e1;
     }
 
     #assetCloseBtn {
       position: absolute;
-      top: 10px;
+      top: 8px;
       right: 10px;
-      background: none;
+      background: transparent;
       border: none;
-      color: #64748b;
-      cursor: pointer;
+      color: #94a3b8;
       font-size: 18px;
-      line-height: 1;
+      cursor: pointer;
     }
+    #assetCloseBtn:hover { color: #fff; }
 
-    #assetCloseBtn:hover {
-      color: #e2e8f0;
+    #assetTag {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      padding-right: 20px;
     }
 
     #assetEditBtn {
       margin-top: 10px;
       width: 100%;
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: #94a3b8;
-      border-radius: 6px;
-      padding: 6px;
-      font-size: 11px;
-      cursor: pointer;
-    }
-
-    #assetEditBtn:hover {
-      background: #1d4ed8;
-      border-color: #3b82f6;
-      color: #fff;
     }
   </style>
 </head>
@@ -369,29 +234,32 @@
 
   <div id="loadingOverlay">
     <div class="spinner"></div>
-    <div id="loadingText">Loading Sentinel 3D view…</div>
+    <div id="loadingText">Loading Ordinis HAZLOC GIS…</div>
   </div>
 
   <div id="modeBanner"></div>
 
   <div id="measurePanel">
-    <strong>📏 Measurement</strong>
+    <strong>Measurement</strong>
+    <div class="measureRow"><span class="measureLabel">Last horizontal</span><span class="measureValue" id="measureHorizontal">—</span></div>
+    <div class="measureRow"><span class="measureLabel">Last vertical</span><span class="measureValue" id="measureVertical">—</span></div>
+    <div class="measureRow"><span class="measureLabel">Last 3D</span><span class="measureValue" id="measure3D">—</span></div>
     <div id="measureTotal">—</div>
     <div id="measureCount">0 points placed</div>
     <button id="measureClearBtn">Clear</button>
   </div>
 
   <div id="drawPanel">
-    <strong id="drawTitle">✏️ Draw</strong>
+    <strong id="drawTitle">Draw</strong>
     <div id="drawPointCount">0 points — click to add vertices</div>
-    <button class="drawBtn" id="drawUndoBtn">↩ Undo</button>
-    <button class="drawBtn primary" id="drawFinishBtn">✓ Finish &amp; Save</button>
-    <button class="drawBtn" id="drawCancelBtn">✕ Cancel</button>
+    <button class="drawBtn" id="drawUndoBtn">Undo</button>
+    <button class="drawBtn primary" id="drawFinishBtn">Finish & Save</button>
+    <button class="drawBtn" id="drawCancelBtn">Cancel</button>
   </div>
 
   <div id="notePanel">
-    <strong>📝 Add Map Note</strong>
-    <div id="noteCoords">Click on the 3D scene to place note</div>
+    <strong>Add Map Note</strong>
+    <div id="noteCoords">Click on the map to place note</div>
     <input id="noteTitle" placeholder="Title (optional)" />
     <textarea id="noteContent" placeholder="Note content…"></textarea>
     <div class="noteActions">
@@ -402,139 +270,618 @@
 
   <div id="assetPanel">
     <button id="assetCloseBtn">×</button>
-    <h3 id="assetTag">Asset</h3>
+    <div id="assetTag">Asset</div>
     <div class="assetRow"><span class="assetLabel">Equipment</span><span class="assetValue" id="assetEquipType">—</span></div>
     <div class="assetRow"><span class="assetLabel">Zone</span><span class="assetValue" id="assetZone">—</span></div>
     <div class="assetRow"><span class="assetLabel">Hazard Source</span><span class="assetValue" id="assetHazard">—</span></div>
     <div class="assetRow"><span class="assetLabel">Trade</span><span class="assetValue" id="assetTrade">—</span></div>
     <div class="assetRow"><span class="assetLabel">Zone Radius</span><span class="assetValue" id="assetRadius">—</span></div>
     <div class="assetRow"><span class="assetLabel">Location</span><span class="assetValue" id="assetLocation">—</span></div>
-    <div id="assetNoteRow" style="display:none" class="assetRow"><span class="assetLabel">Notes</span><span class="assetValue" id="assetNotes">—</span></div>
-    <button id="assetEditBtn">Open Full Record →</button>
+    <div id="assetNoteRow" class="assetRow" style="display:none"><span class="assetLabel">Notes</span><span class="assetValue" id="assetNotes">—</span></div>
+    <button id="assetEditBtn">Open Full Record</button>
   </div>
 
 <script>
 const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmYzY2MWZkNi0wZTY1LTQ5MmQtYjVlYi02Njk2ODBiZDcyN2MiLCJpZCI6NDA0NDYxLCJpYXQiOjE3NzY2MDA2Mzl9.nFohVpwcL5-nA1ObMbiFgyJFV6-EaNNqa3A4_3p3y4E';
 const DATA_API = 'https://app.base44.com/api/apps/69b3fe5c9c81ee057de2ffd1/functions/getProjectMapData';
 
-const ZONE_FILL = {
-  'Gas Zone 0':   [225,6,0,0.5],    'Gas Zone 1':   [255,107,0,0.4],
-  'Gas Zone 2':   [255,214,0,0.3],  'Dust Zone 20': [204,0,0,0.5],
-  'Dust Zone 21': [255,69,0,0.4],   'Dust Zone 22': [255,165,0,0.3],
-  'No Classification Required': [34,197,94,0.2],
+const CONTEXTS = {
+  DASHBOARD: 'dashboard',
+  PROJECT: 'project'
 };
+
+const MODES_BY_CONTEXT = {
+  dashboard: new Set(['idle', 'boundary', 'locate']),
+  project: new Set(['idle', 'pin', 'boundary', 'draw_polygon', 'draw_polyline', 'note', 'measure', 'hazcad'])
+};
+
+const ZONE_FILL = {
+  'Gas Zone 0': [225,6,0,0.50],
+  'Gas Zone 1': [255,107,0,0.40],
+  'Gas Zone 2': [255,214,0,0.30],
+  'Dust Zone 20': [204,0,0,0.50],
+  'Dust Zone 21': [255,69,0,0.40],
+  'Dust Zone 22': [255,165,0,0.30],
+  'No Classification Required': [34,197,94,0.20],
+};
+
 const ZONE_OUTLINE = {
-  'Gas Zone 0':'#E10600','Gas Zone 1':'#FF6B00','Gas Zone 2':'#FFD600',
-  'Dust Zone 20':'#CC0000','Dust Zone 21':'#FF4500','Dust Zone 22':'#FFA500',
+  'Gas Zone 0':'#E10600',
+  'Gas Zone 1':'#FF6B00',
+  'Gas Zone 2':'#FFD600',
+  'Dust Zone 20':'#CC0000',
+  'Dust Zone 21':'#FF4500',
+  'Dust Zone 22':'#FFA500',
   'No Classification Required':'#22c55e',
 };
+
 const DEFAULT_ZONE_RADIUS = {
-  'Gas Zone 0':0.5,'Gas Zone 1':3,'Gas Zone 2':8,
-  'Dust Zone 20':0.5,'Dust Zone 21':1.5,'Dust Zone 22':4,
+  'Gas Zone 0': 0.5,
+  'Gas Zone 1': 3,
+  'Gas Zone 2': 8,
+  'Dust Zone 20': 0.5,
+  'Dust Zone 21': 1.5,
+  'Dust Zone 22': 4,
 };
+
 const PIN_COLOR = {
-  'Gas Zone 0':'#E10600','Gas Zone 1':'#FF6B00','Gas Zone 2':'#FFD600',
-  'Dust Zone 20':'#CC0000','Dust Zone 21':'#FF4500','Dust Zone 22':'#FFA500',
-  'No Classification Required':'#22c55e',default:'#94a3b8',
+  'Gas Zone 0':'#E10600',
+  'Gas Zone 1':'#FF6B00',
+  'Gas Zone 2':'#FFD600',
+  'Dust Zone 20':'#CC0000',
+  'Dust Zone 21':'#FF4500',
+  'Dust Zone 22':'#FFA500',
+  'No Classification Required':'#22c55e',
+  'default':'#94a3b8'
 };
 
-let viewer, projectId;
-let layers = { assets:true, hazardZones:true, notes:true };
-const groups = { assets:[], hazardZones:[], notes:[], shapes:[] };
+let viewer = null;
+let projectId = null;
+let viewContext = CONTEXTS.PROJECT;
 let mode = 'idle';
-let measurePoints=[], measureEntities=[];
-let drawPoints=[], drawEntities=[], drawType='polygon';
-let pendingNote=null, selectedRecord=null;
+let selectedRecord = null;
+let pendingNote = null;
+let layers = { assets: true, hazardZones: true, notes: true };
 
-function geodesicDistanceMeters(cartesian1, cartesian2) {
-  const carto1 = Cesium.Cartographic.fromCartesian(cartesian1);
-  const carto2 = Cesium.Cartographic.fromCartesian(cartesian2);
+const groups = { assets: [], hazardZones: [], notes: [], shapes: [], temp: [] };
 
-  if (!carto1 || !carto2) return 0;
+let measurePoints = [];
+let measureEntities = [];
 
-  const geodesic = new Cesium.EllipsoidGeodesic(carto1, carto2);
-  return geodesic.surfaceDistance || 0;
+let drawPoints = [];
+let drawEntities = [];
+let drawKind = 'polygon';
+
+function post(msg) {
+  try { window.parent.postMessage(msg, '*'); } catch (e) {}
 }
 
-function fmt(m){
-  return m>=1000 ? `${(m/1000).toFixed(2)} km` : `${m.toFixed(2)} m`;
+function normalizeContext(value) {
+  const v = String(value || '').toLowerCase().trim();
+  return v === CONTEXTS.DASHBOARD ? CONTEXTS.DASHBOARD : CONTEXTS.PROJECT;
 }
 
-function post(msg){
-  try{ window.parent.postMessage(msg,'*'); }catch(e){}
+function normalizeMode(value) {
+  const key = String(value || '').toLowerCase().trim();
+  if (['measure'].includes(key)) return 'measure';
+  if (['polygon', 'draw_polygon'].includes(key)) return 'draw_polygon';
+  if (['line', 'polyline', 'draw_polyline'].includes(key)) return 'draw_polyline';
+  if (['note', 'notes'].includes(key)) return 'note';
+  if (['pin', 'drop_pin', 'pinpick', 'pin_pick'].includes(key)) return 'pin';
+  if (['boundary', 'set_boundary', 'boundary_polygon'].includes(key)) return 'boundary';
+  if (['locate', 'flyto', 'fly_to'].includes(key)) return 'locate';
+  if (['hazcad'].includes(key)) return 'hazcad';
+  return 'idle';
 }
 
-window.addEventListener('message', e => {
-  const d=e.data;
-  if(!d||!d.type) return;
-
-  if(d.type==='FLY_TO') flyTo(d.lat,d.lng,d.height||200);
-  if(d.type==='LAYER_TOGGLE'){ layers[d.layer]=d.visible; applyLayers(); }
-  if(d.type==='SET_MODE') setMode(d.mode);
-  if(d.type==='RELOAD_DATA') loadData();
-  if(d.type==='LOCATE_ME') flyTo(d.lat,d.lng,d.height||200);
-});
-
-function flyTo(lat,lng,h=200){
-  viewer.camera.flyTo({
-    destination:Cesium.Cartesian3.fromDegrees(lng,lat,h),
-    duration:1.5
-  });
+function modeAllowedInContext(normalizedMode) {
+  return MODES_BY_CONTEXT[viewContext].has(normalizedMode);
 }
 
-function setMode(m){
-  mode=m;
-  const msgs={
-    measure:'📏 Click to place measurement points',
-    draw_polygon:'⬡ Click to place polygon vertices',
-    draw_polyline:'〰 Click to place line points',
-    note:'📝 Click anywhere on the scene to place note',
+function setContext(nextContext) {
+  viewContext = normalizeContext(nextContext);
+  if (!modeAllowedInContext(mode)) setMode('idle');
+  post({ type: 'CONTEXT_SET', context: viewContext });
+}
+
+function setMode(requestedMode) {
+  const nextMode = normalizeMode(requestedMode);
+  if (!modeAllowedInContext(nextMode)) {
+    mode = 'idle';
+  } else {
+    mode = nextMode;
+  }
+
+  const msgs = {
+    measure: 'Click to place measurement points',
+    draw_polygon: 'Click to place polygon vertices',
+    draw_polyline: 'Click to place line points',
+    note: 'Click anywhere on the scene to place note',
+    pin: 'Click on the map to place a geotagged asset pin',
+    boundary: 'Click to place project boundary vertices',
+    hazcad: 'HAZCAD trigger ready'
   };
 
-  const banner=document.getElementById('modeBanner');
-
-  if(m!=='idle'&&msgs[m]){
-    banner.textContent=msgs[m];
+  const banner = document.getElementById('modeBanner');
+  if (mode !== 'idle' && msgs[mode]) {
+    banner.textContent = msgs[mode];
     banner.classList.add('visible');
   } else {
     banner.classList.remove('visible');
   }
 
-  document.getElementById('measurePanel').classList.toggle('visible',m==='measure');
-  document.getElementById('drawPanel').classList.toggle('visible',m==='draw_polygon'||m==='draw_polyline');
+  document.getElementById('measurePanel').classList.toggle('visible', mode === 'measure');
+  document.getElementById('drawPanel').classList.toggle('visible', mode === 'draw_polygon' || mode === 'draw_polyline' || mode === 'boundary');
 
-  if(m==='draw_polygon') document.getElementById('drawTitle').textContent='⬡ Draw Polygon';
-  if(m==='draw_polyline') document.getElementById('drawTitle').textContent='〰 Draw Line';
+  if (mode === 'draw_polygon') document.getElementById('drawTitle').textContent = 'Polygon';
+  if (mode === 'draw_polyline') document.getElementById('drawTitle').textContent = 'Line';
+  if (mode === 'boundary') document.getElementById('drawTitle').textContent = 'Set Boundary';
 
-  if(m!=='measure') clearMeasure();
-  if(m!=='draw_polygon'&&m!=='draw_polyline') clearDraw();
+  if (mode !== 'measure') clearMeasure();
+  if (!['draw_polygon', 'draw_polyline', 'boundary'].includes(mode)) clearDraw();
+  if (mode !== 'note') document.getElementById('notePanel').classList.remove('visible');
+}
 
-  if(m!=='note'){
-    document.getElementById('notePanel').classList.remove('visible');
+function getCartographicFromCartesian(cartesian) {
+  return Cesium.Cartographic.fromCartesian(cartesian);
+}
+
+function geodesicDistanceMeters(cartesian1, cartesian2) {
+  const carto1 = getCartographicFromCartesian(cartesian1);
+  const carto2 = getCartographicFromCartesian(cartesian2);
+  if (!carto1 || !carto2) return 0;
+  const geodesic = new Cesium.EllipsoidGeodesic(carto1, carto2);
+  return geodesic.surfaceDistance || 0;
+}
+
+function verticalDifferenceMeters(cartesian1, cartesian2) {
+  const carto1 = getCartographicFromCartesian(cartesian1);
+  const carto2 = getCartographicFromCartesian(cartesian2);
+  if (!carto1 || !carto2) return 0;
+  return carto2.height - carto1.height;
+}
+
+function straightLineDistanceMeters(cartesian1, cartesian2) {
+  return Cesium.Cartesian3.distance(cartesian1, cartesian2);
+}
+
+function fmt(m) {
+  const abs = Math.abs(m);
+  return abs >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${m.toFixed(2)} m`;
+}
+
+function flyTo(lat, lng, h = 200) {
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(lng, lat, h),
+    duration: 1.5
+  });
+}
+
+function pinSvg(color) {
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"><path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 26 16 26s16-14 16-26C32 7.16 24.84 0 16 0z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="16" cy="16" r="5" fill="white" opacity="0.4"/></svg>`;
+  return `data:image/svg+xml;base64,${btoa(s)}`;
+}
+
+function noteSvg() {
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/><text x="14" y="19" font-size="16" font-weight="bold" fill="white" text-anchor="middle">N</text></svg>`;
+  return `data:image/svg+xml;base64,${btoa(s)}`;
+}
+
+function clearGroup(name) {
+  groups[name].forEach(e => { try { viewer.entities.remove(e); } catch (x) {} });
+  groups[name] = [];
+}
+
+function clearTemp() {
+  clearGroup('temp');
+}
+
+function applyLayers() {
+  groups.assets.forEach(e => e.show = layers.assets);
+  groups.hazardZones.forEach(e => e.show = layers.hazardZones);
+  groups.notes.forEach(e => e.show = layers.notes !== false);
+  groups.shapes.forEach(e => e.show = true);
+  groups.temp.forEach(e => e.show = true);
+}
+
+function addTempPinMarker(lat, lng) {
+  clearTemp();
+  const pin = viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lng, lat, 3),
+    billboard: {
+      image: pinSvg('#ef4444'),
+      width: 30,
+      height: 40,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    }
+  });
+  groups.temp.push(pin);
+}
+
+function addSavedShapeLocal(shapeType, coords, opts = {}) {
+  if (!coords || coords.length < 1) return;
+
+  const isBoundary = !!opts.isBoundary;
+  const colorHex = opts.color || (isBoundary ? '#ef4444' : '#0d9488');
+  const fillColor = Cesium.Color.fromCssColorString(colorHex).withAlpha(isBoundary ? 0.10 : 0.18);
+  const lineColor = Cesium.Color.fromCssColorString(colorHex);
+  const positions = coords.map(p => Cesium.Cartesian3.fromDegrees(p.lng, p.lat, 1));
+
+  if (shapeType === 'boundary' || shapeType === 'polygon') {
+    if (positions.length < 3) return;
+    const polygonEntity = viewer.entities.add({
+      polygon: {
+        hierarchy: new Cesium.PolygonHierarchy(positions),
+        material: isBoundary ? Cesium.Color.TRANSPARENT : fillColor,
+        outline: false
+      },
+      polyline: {
+        positions: [...positions, positions[0]],
+        width: isBoundary ? 3 : 2,
+        material: isBoundary
+          ? new Cesium.PolylineDashMaterialProperty({ color: lineColor, dashLength: 10 })
+          : lineColor,
+        clampToGround: true
+      }
+    });
+    polygonEntity._shapeType = shapeType;
+    polygonEntity._coords = coords;
+    groups.shapes.push(polygonEntity);
+    return;
+  }
+
+  if (shapeType === 'line' || shapeType === 'polyline') {
+    if (positions.length < 2) return;
+    const lineEntity = viewer.entities.add({
+      polyline: {
+        positions,
+        width: 2,
+        material: lineColor,
+        clampToGround: true
+      }
+    });
+    lineEntity._shapeType = shapeType;
+    lineEntity._coords = coords;
+    groups.shapes.push(lineEntity);
   }
 }
 
-async function initCesium(){
+function renderRecords(records) {
+  records.filter(r => r.latitude != null && r.longitude != null).forEach(r => {
+    const color = PIN_COLOR[r.zone_classification] || PIN_COLOR.default;
+
+    const pin = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(r.longitude, r.latitude, 3),
+      billboard: {
+        image: pinSvg(color),
+        width: 32,
+        height: 42,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      },
+      label: {
+        text: r.asset_tag_number || '',
+        font: '600 11px Inter,sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.fromCssColorString('#0f172a'),
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: new Cesium.Cartesian2(0, -46),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
+    });
+
+    pin._sType = 'asset';
+    pin._sRecord = r;
+    groups.assets.push(pin);
+
+    if (r.zone_classification && ZONE_FILL[r.zone_classification]) {
+      const [rv, g, b, a] = ZONE_FILL[r.zone_classification];
+      const rad = r.zone_radius_m || DEFAULT_ZONE_RADIUS[r.zone_classification] || 3;
+
+      const ell = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(r.longitude, r.latitude, 1),
+        ellipse: {
+          semiMajorAxis: rad,
+          semiMinorAxis: rad,
+          material: new Cesium.Color(rv / 255, g / 255, b / 255, a),
+          outline: true,
+          outlineColor: Cesium.Color.fromCssColorString(ZONE_OUTLINE[r.zone_classification] || '#ffffff'),
+          outlineWidth: 1
+        }
+      });
+
+      ell._sType = 'zone';
+      groups.hazardZones.push(ell);
+    }
+  });
+}
+
+function addNoteMarker(n) {
+  if (n.lat == null || n.lng == null) return;
+
+  const ne = viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(n.lng, n.lat, 3),
+    billboard: {
+      image: noteSvg(),
+      width: 28,
+      height: 28,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    }
+  });
+
+  ne._sType = 'note';
+  ne._sNote = n;
+  groups.notes.push(ne);
+}
+
+function renderNotes(notes) {
+  notes.filter(n => n.lat != null && n.lng != null).forEach(addNoteMarker);
+}
+
+function renderShapes(shapes) {
+  shapes.forEach(s => {
+    if (!s.coordinates || s.coordinates.length < 2) return;
+    const isBoundary = !!s.is_boundary || s.type === 'boundary';
+    const shapeType = isBoundary ? 'boundary' : s.type;
+    addSavedShapeLocal(shapeType, s.coordinates, {
+      isBoundary,
+      color: s.color
+    });
+  });
+}
+
+function showAsset(r) {
+  selectedRecord = r;
+  document.getElementById('assetTag').textContent = r.asset_tag_number || 'Asset';
+  document.getElementById('assetEquipType').textContent = r.asset_equipment_type || '—';
+  document.getElementById('assetZone').textContent = r.zone_classification || '—';
+  document.getElementById('assetHazard').textContent = r.hazard_source_type || '—';
+  document.getElementById('assetTrade').textContent = r.related_trade || '—';
+
+  const rad = r.zone_radius_m || DEFAULT_ZONE_RADIUS[r.zone_classification];
+  document.getElementById('assetRadius').textContent = rad ? `${rad} m` : '—';
+  document.getElementById('assetLocation').textContent = r.latitude ? `${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}` : '—';
+
+  if (r.notes) {
+    document.getElementById('assetNoteRow').style.display = 'flex';
+    document.getElementById('assetNotes').textContent = r.notes;
+  } else {
+    document.getElementById('assetNoteRow').style.display = 'none';
+  }
+
+  document.getElementById('assetEditBtn').style.display = '';
+  document.getElementById('assetPanel').classList.add('visible');
+  post({ type: 'ASSET_SELECTED', recordId: r.id });
+}
+
+function showNoteInfo(n) {
+  selectedRecord = null;
+  document.getElementById('assetTag').textContent = n.title || 'Note';
+  document.getElementById('assetEquipType').textContent = n.content || '—';
+  document.getElementById('assetZone').textContent = '—';
+  document.getElementById('assetHazard').textContent = '—';
+  document.getElementById('assetTrade').textContent = '—';
+  document.getElementById('assetRadius').textContent = '—';
+  document.getElementById('assetLocation').textContent = `${n.lat.toFixed(5)}, ${n.lng.toFixed(5)}`;
+  document.getElementById('assetNoteRow').style.display = 'none';
+  document.getElementById('assetEditBtn').style.display = 'none';
+  document.getElementById('assetPanel').classList.add('visible');
+}
+
+function hideAsset() {
+  document.getElementById('assetPanel').classList.remove('visible');
+  selectedRecord = null;
+}
+
+function clearMeasure() {
+  measureEntities.forEach(e => { try { viewer.entities.remove(e); } catch (x) {} });
+  measureEntities = [];
+  measurePoints = [];
+  document.getElementById('measureHorizontal').textContent = '—';
+  document.getElementById('measureVertical').textContent = '—';
+  document.getElementById('measure3D').textContent = '—';
+  document.getElementById('measureTotal').textContent = '—';
+  document.getElementById('measureCount').textContent = '0 points placed';
+}
+
+function addMeasPt(lat, lng, cart) {
+  measurePoints.push({ lat, lng, cart });
+
+  measureEntities.push(viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lng, lat, 2),
+    point: {
+      pixelSize: 8,
+      color: Cesium.Color.fromCssColorString('#3b82f6'),
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 1.5
+    }
+  }));
+
+  if (measurePoints.length >= 2) {
+    const p1 = measurePoints[measurePoints.length - 2];
+    const p2 = measurePoints[measurePoints.length - 1];
+
+    const horizontal = geodesicDistanceMeters(p1.cart, p2.cart);
+    const vertical = verticalDifferenceMeters(p1.cart, p2.cart);
+    const spatial3D = straightLineDistanceMeters(p1.cart, p2.cart);
+
+    const ml = (p1.lat + p2.lat) / 2;
+    const mn = (p1.lng + p2.lng) / 2;
+
+    measureEntities.push(viewer.entities.add({
+      polyline: {
+        positions: [p1.cart, p2.cart],
+        width: 2,
+        material: new Cesium.PolylineDashMaterialProperty({
+          color: Cesium.Color.fromCssColorString('#3b82f6')
+        }),
+        clampToGround: true
+      }
+    }));
+
+    measureEntities.push(viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(mn, ml, 5),
+      label: {
+        text: `H ${fmt(horizontal)}`,
+        font: '600 12px Inter,sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
+    }));
+
+    let totalHorizontal = 0;
+    for (let i = 1; i < measurePoints.length; i++) {
+      totalHorizontal += geodesicDistanceMeters(measurePoints[i - 1].cart, measurePoints[i].cart);
+    }
+
+    document.getElementById('measureHorizontal').textContent = fmt(horizontal);
+    document.getElementById('measureVertical').textContent = fmt(vertical);
+    document.getElementById('measure3D').textContent = fmt(spatial3D);
+    document.getElementById('measureTotal').textContent = fmt(totalHorizontal);
+    document.getElementById('measureCount').textContent = `${measurePoints.length} points`;
+
+    post({
+      type: 'MEASURE_UPDATE',
+      horizontal: fmt(horizontal),
+      vertical: fmt(vertical),
+      spatial3D: fmt(spatial3D),
+      totalHorizontal: fmt(totalHorizontal),
+      points: measurePoints.length
+    });
+  }
+}
+
+function clearDraw() {
+  drawEntities.forEach(e => { try { viewer.entities.remove(e); } catch (x) {} });
+  drawEntities = [];
+  drawPoints = [];
+  document.getElementById('drawPointCount').textContent = '0 points — click to add vertices';
+}
+
+function addDrawPt(lat, lng, cart) {
+  drawPoints.push({ lat, lng, cart });
+
+  drawEntities.push(viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lng, lat, 2),
+    point: {
+      pixelSize: 7,
+      color: Cesium.Color.fromCssColorString('#ef4444'),
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 1.5
+    }
+  }));
+
+  if (drawPoints.length >= 2) {
+    drawEntities.filter(e => e._draftShape).forEach(e => { try { viewer.entities.remove(e); } catch (x) {} });
+    drawEntities = drawEntities.filter(e => !e._draftShape);
+
+    const positions = drawPoints.map(p => p.cart);
+    const shapeType = mode === 'boundary' ? 'polygon' : (drawKind === 'polygon' ? 'polygon' : 'polyline');
+    const linePositions = shapeType === 'polygon' ? [...positions, positions[0]] : positions;
+
+    const draft = viewer.entities.add({
+      polyline: {
+        positions: linePositions,
+        width: mode === 'boundary' ? 3 : 2,
+        material: mode === 'boundary'
+          ? new Cesium.PolylineDashMaterialProperty({
+              color: Cesium.Color.fromCssColorString('#ef4444'),
+              dashLength: 10
+            })
+          : Cesium.Color.fromCssColorString('#ef4444').withAlpha(0.75),
+        clampToGround: true
+      }
+    });
+    draft._draftShape = true;
+    drawEntities.push(draft);
+  }
+
+  document.getElementById('drawPointCount').textContent = `${drawPoints.length} point${drawPoints.length !== 1 ? 's' : ''} placed`;
+}
+
+function flyToData(records, shapes) {
+  const boundary = shapes.find(s => s.is_boundary || s.type === 'boundary');
+  if (boundary && boundary.coordinates.length > 0) {
+    const lats = boundary.coordinates.map(c => c.lat);
+    const lngs = boundary.coordinates.map(c => c.lng);
+    flyTo((Math.min(...lats) + Math.max(...lats)) / 2, (Math.min(...lngs) + Math.max(...lngs)) / 2, 300);
+    return;
+  }
+
+  const pts = records.filter(r => r.latitude != null && r.longitude != null);
+  if (pts.length > 0) {
+    flyTo(
+      pts.reduce((s, r) => s + r.latitude, 0) / pts.length,
+      pts.reduce((s, r) => s + r.longitude, 0) / pts.length,
+      300
+    );
+  }
+}
+
+async function loadData() {
+  if (!projectId) return;
+
+  document.getElementById('loadingText').textContent = 'Loading project data…';
+
+  Object.values(groups).flat().forEach(e => { try { viewer.entities.remove(e); } catch (x) {} });
+  Object.keys(groups).forEach(k => groups[k] = []);
+
+  try {
+    const resp = await fetch(DATA_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId }),
+    });
+
+    const data = await resp.json();
+
+    renderRecords(data.records || []);
+    renderNotes(data.notes || []);
+    renderShapes(data.shapes || []);
+    applyLayers();
+    flyToData(data.records || [], data.shapes || []);
+
+    post({
+      type: 'DATA_LOADED',
+      recordCount: (data.records || []).length,
+      noteCount: (data.notes || []).length,
+      shapeCount: (data.shapes || []).length
+    });
+  } catch (err) {
+    console.error('Data load error:', err);
+    post({ type: 'DATA_ERROR', error: err.message });
+  }
+
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+async function initCesium() {
   Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
 
-  viewer = new Cesium.Viewer('cesiumContainer',{
-    timeline:false,
-    animation:false,
-    baseLayerPicker:false,
-    geocoder:false,
-    homeButton:false,
-    sceneModePicker:false,
-    navigationHelpButton:false,
-    fullscreenButton:false,
-    infoBox:false,
-    selectionIndicator:false,
-    creditContainer:document.createElement('div'),
+  viewer = new Cesium.Viewer('cesiumContainer', {
+    timeline: false,
+    animation: false,
+    baseLayerPicker: false,
+    geocoder: false,
+    homeButton: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    fullscreenButton: false,
+    infoBox: false,
+    selectionIndicator: false,
+    creditContainer: document.createElement('div'),
   });
 
   try {
     const tileset = await Cesium.createGooglePhotorealistic3DTileset();
     viewer.scene.primitives.add(tileset);
-  } catch(e){
+  } catch (e) {
     console.warn('Google 3D Tiles unavailable, using world terrain');
     viewer.terrainProvider = await Cesium.createWorldTerrainAsync();
   }
@@ -542,491 +889,228 @@ async function initCesium(){
   const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
   handler.setInputAction(click => {
-    if(mode==='idle'){
-      const picked=viewer.scene.pick(click.position);
-      if(Cesium.defined(picked)&&picked.id){
-        const ent=picked.id;
-        if(ent._sType==='asset') showAsset(ent._sRecord);
-        else if(ent._sType==='note') showNoteInfo(ent._sNote);
+    const cart = viewer.scene.pickPosition(click.position);
+
+    if (mode === 'idle') {
+      const picked = viewer.scene.pick(click.position);
+      if (Cesium.defined(picked) && picked.id) {
+        const ent = picked.id;
+        if (ent._sType === 'asset') showAsset(ent._sRecord);
+        else if (ent._sType === 'note') showNoteInfo(ent._sNote);
       } else {
         hideAsset();
       }
       return;
     }
 
-    const cart=viewer.scene.pickPosition(click.position);
-    if(!cart) return;
+    if (!cart) return;
 
-    const cg=Cesium.Cartographic.fromCartesian(cart);
-    const lat=Cesium.Math.toDegrees(cg.latitude);
-    const lng=Cesium.Math.toDegrees(cg.longitude);
+    const cg = Cesium.Cartographic.fromCartesian(cart);
+    const lat = Cesium.Math.toDegrees(cg.latitude);
+    const lng = Cesium.Math.toDegrees(cg.longitude);
 
-    if(mode==='measure') addMeasPt(lat,lng,cart);
-    else if(mode==='draw_polygon'||mode==='draw_polyline') addDrawPt(lat,lng,cart);
-    else if(mode==='note'){
-      pendingNote={lat,lng};
-      document.getElementById('noteCoords').textContent=`📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    if (mode === 'measure') {
+      addMeasPt(lat, lng, cart);
+      return;
+    }
+
+    if (mode === 'draw_polygon' || mode === 'draw_polyline' || mode === 'boundary') {
+      addDrawPt(lat, lng, cart);
+      return;
+    }
+
+    if (mode === 'note') {
+      pendingNote = { lat, lng };
+      document.getElementById('noteCoords').textContent = `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       document.getElementById('notePanel').classList.add('visible');
+      return;
+    }
+
+    if (mode === 'pin') {
+      addTempPinMarker(lat, lng);
+      post({ type: 'PIN_PLACED', lat, lng, projectId });
+      setMode('idle');
+      return;
     }
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
   handler.setInputAction(click => {
-    const cart=viewer.scene.pickPosition(click.position);
-    if(!cart) return;
-    const cg=Cesium.Cartographic.fromCartesian(cart);
+    const cart = viewer.scene.pickPosition(click.position);
+    if (!cart) return;
+    const cg = Cesium.Cartographic.fromCartesian(cart);
     post({
-      type:'RIGHT_CLICK',
-      lat:Cesium.Math.toDegrees(cg.latitude),
-      lng:Cesium.Math.toDegrees(cg.longitude)
+      type: 'RIGHT_CLICK',
+      lat: Cesium.Math.toDegrees(cg.latitude),
+      lng: Cesium.Math.toDegrees(cg.longitude)
     });
   }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 
-  viewer.camera.changed.addEventListener(()=>{
-    const p=viewer.camera.positionCartographic;
+  viewer.camera.changed.addEventListener(() => {
+    const p = viewer.camera.positionCartographic;
     post({
-      type:'CAMERA_STATE',
-      lat:Cesium.Math.toDegrees(p.latitude),
-      lng:Cesium.Math.toDegrees(p.longitude),
-      height:p.height
+      type: 'CAMERA_STATE',
+      lat: Cesium.Math.toDegrees(p.latitude),
+      lng: Cesium.Math.toDegrees(p.longitude),
+      height: p.height
     });
   });
 }
 
-function addMeasPt(lat,lng,cart){
-  measurePoints.push({lat,lng,cart});
-
-  measureEntities.push(viewer.entities.add({
-    position:Cesium.Cartesian3.fromDegrees(lng,lat,2),
-    point:{
-      pixelSize:8,
-      color:Cesium.Color.fromCssColorString('#3b82f6'),
-      outlineColor:Cesium.Color.WHITE,
-      outlineWidth:1.5
-    }
-  }));
-
-  if(measurePoints.length>=2){
-    const p1=measurePoints[measurePoints.length-2];
-    const p2=measurePoints[measurePoints.length-1];
-    const d=geodesicDistanceMeters(p1.cart, p2.cart);
-
-    const ml=(p1.lat+p2.lat)/2;
-    const mn=(p1.lng+p2.lng)/2;
-
-    measureEntities.push(viewer.entities.add({
-      polyline:{
-        positions:[p1.cart,p2.cart],
-        width:2,
-        material:new Cesium.PolylineDashMaterialProperty({
-          color:Cesium.Color.fromCssColorString('#3b82f6')
-        }),
-        clampToGround:true
-      }
-    }));
-
-    measureEntities.push(viewer.entities.add({
-      position:Cesium.Cartesian3.fromDegrees(mn,ml,5),
-      label:{
-        text:fmt(d),
-        font:'600 12px Inter,sans-serif',
-        fillColor:Cesium.Color.WHITE,
-        outlineColor:Cesium.Color.BLACK,
-        outlineWidth:2,
-        style:Cesium.LabelStyle.FILL_AND_OUTLINE,
-        showBackground:false,
-        disableDepthTestDistance:Number.POSITIVE_INFINITY
-      }
-    }));
-
-    let total=0;
-    for(let i=1;i<measurePoints.length;i++){
-      total += geodesicDistanceMeters(measurePoints[i-1].cart, measurePoints[i].cart);
-    }
-
-    document.getElementById('measureTotal').textContent=fmt(total);
-    document.getElementById('measureCount').textContent=`${measurePoints.length} points`;
-    post({type:'MEASURE_UPDATE',distance:fmt(total),points:measurePoints.length});
-  }
-}
-
-function clearMeasure(){
-  measureEntities.forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
-  measureEntities=[];
-  measurePoints=[];
-  document.getElementById('measureTotal').textContent='—';
-  document.getElementById('measureCount').textContent='0 points placed';
-}
-
-document.getElementById('measureClearBtn').addEventListener('click',()=>{
+document.getElementById('measureClearBtn').addEventListener('click', () => {
   clearMeasure();
   setMode('idle');
-  post({type:'MODE_CHANGE',mode:'idle'});
+  post({ type: 'MODE_CHANGE', mode: 'idle' });
 });
 
-function addDrawPt(lat,lng,cart){
-  drawPoints.push({lat,lng,cart});
+document.getElementById('drawUndoBtn').addEventListener('click', () => {
+  if (!drawPoints.length) return;
+  const pts = [...drawPoints];
+  clearDraw();
+  pts.slice(0, -1).forEach(p => addDrawPt(p.lat, p.lng, p.cart));
+});
 
-  drawEntities.push(viewer.entities.add({
-    position:Cesium.Cartesian3.fromDegrees(lng,lat,2),
-    point:{
-      pixelSize:7,
-      color:Cesium.Color.fromCssColorString('#ef4444'),
-      outlineColor:Cesium.Color.WHITE,
-      outlineWidth:1.5
-    }
-  }));
+document.getElementById('drawCancelBtn').addEventListener('click', () => {
+  clearDraw();
+  setMode('idle');
+  document.getElementById('drawPanel').classList.remove('visible');
+  post({ type: 'MODE_CHANGE', mode: 'idle' });
+});
 
-  if(drawPoints.length>=2){
-    drawEntities.filter(e=>e._dp).forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
-    drawEntities=drawEntities.filter(e=>!e._dp);
+document.getElementById('drawFinishBtn').addEventListener('click', () => {
+  const isBoundary = mode === 'boundary';
+  const shapeType = isBoundary ? 'boundary' : (drawKind === 'polygon' ? 'polygon' : 'line');
 
-    const pos=drawPoints.map(p=>p.cart);
-    const pts=drawType==='polygon'?[...pos,pos[0]]:pos;
+  if ((shapeType === 'boundary' || shapeType === 'polygon') && drawPoints.length < 3) return;
+  if (shapeType === 'line' && drawPoints.length < 2) return;
 
-    const line=viewer.entities.add({
-      polyline:{
-        positions:pts,
-        width:2,
-        material:Cesium.Color.fromCssColorString('#ef4444').withAlpha(0.7),
-        clampToGround:true
-      }
-    });
+  const coordinates = drawPoints.map(p => ({ lat: p.lat, lng: p.lng }));
 
-    line._dp=true;
-    drawEntities.push(line);
+  addSavedShapeLocal(shapeType, coordinates, {
+    isBoundary,
+    color: isBoundary ? '#ef4444' : '#0d9488'
+  });
+
+  if (isBoundary) {
+    post({ type: 'BOUNDARY_SET', coordinates, projectId });
   }
 
-  document.getElementById('drawPointCount').textContent=`${drawPoints.length} point${drawPoints.length!==1?'s':''} placed`;
-}
+  post({ type: 'DRAW_COMPLETE', shapeType, coordinates, projectId });
 
-function clearDraw(){
-  drawEntities.forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
-  drawEntities=[];
-  drawPoints=[];
-  document.getElementById('drawPointCount').textContent='0 points — click to add vertices';
-}
-
-document.getElementById('drawUndoBtn').addEventListener('click',()=>{
-  if(!drawPoints.length) return;
-  const pts=[...drawPoints];
-  clearDraw();
-  pts.slice(0,-1).forEach(p=>addDrawPt(p.lat,p.lng,p.cart));
-});
-
-document.getElementById('drawCancelBtn').addEventListener('click',()=>{
-  clearDraw();
-  setMode('idle');
-  document.getElementById('drawPanel').classList.remove('visible');
-  post({type:'MODE_CHANGE',mode:'idle'});
-});
-
-document.getElementById('drawFinishBtn').addEventListener('click',()=>{
-  if(drawPoints.length<2) return;
-  post({
-    type:'DRAW_COMPLETE',
-    shapeType:drawType,
-    coordinates:drawPoints.map(p=>({lat:p.lat,lng:p.lng})),
-    projectId
-  });
   clearDraw();
   setMode('idle');
   document.getElementById('drawPanel').classList.remove('visible');
 });
 
-document.getElementById('noteCancelBtn').addEventListener('click',()=>{
-  pendingNote=null;
+document.getElementById('noteCancelBtn').addEventListener('click', () => {
+  pendingNote = null;
   document.getElementById('notePanel').classList.remove('visible');
-  document.getElementById('noteTitle').value='';
-  document.getElementById('noteContent').value='';
+  document.getElementById('noteTitle').value = '';
+  document.getElementById('noteContent').value = '';
   setMode('idle');
-  post({type:'MODE_CHANGE',mode:'idle'});
+  post({ type: 'MODE_CHANGE', mode: 'idle' });
 });
 
-document.getElementById('noteSaveBtn').addEventListener('click',()=>{
-  if(!pendingNote) return;
+document.getElementById('noteSaveBtn').addEventListener('click', () => {
+  if (!pendingNote) return;
 
-  const content=document.getElementById('noteContent').value.trim();
-  if(!content){
-    document.getElementById('noteContent').style.borderColor='#ef4444';
+  const content = document.getElementById('noteContent').value.trim();
+  if (!content) {
+    document.getElementById('noteContent').style.borderColor = '#ef4444';
     return;
   }
 
-  const title=document.getElementById('noteTitle').value.trim();
-  const savedNote={lat:pendingNote.lat,lng:pendingNote.lng,title,content};
+  const title = document.getElementById('noteTitle').value.trim();
+  const savedNote = { lat: pendingNote.lat, lng: pendingNote.lng, title, content };
 
   post({
-    type:'SAVE_NOTE',
-    lat:pendingNote.lat,
-    lng:pendingNote.lng,
+    type: 'SAVE_NOTE',
+    lat: pendingNote.lat,
+    lng: pendingNote.lng,
     title,
     content,
     projectId
   });
 
   document.getElementById('notePanel').classList.remove('visible');
-  document.getElementById('noteTitle').value='';
-  document.getElementById('noteContent').value='';
-  pendingNote=null;
+  document.getElementById('noteTitle').value = '';
+  document.getElementById('noteContent').value = '';
+  pendingNote = null;
   addNoteMarker(savedNote);
   setMode('idle');
-  post({type:'MODE_CHANGE',mode:'idle'});
+  post({ type: 'MODE_CHANGE', mode: 'idle' });
 });
 
-function showAsset(r){
-  selectedRecord=r;
-  document.getElementById('assetTag').textContent=r.asset_tag_number||'Asset';
-  document.getElementById('assetEquipType').textContent=r.asset_equipment_type||'—';
-  document.getElementById('assetZone').textContent=r.zone_classification||'—';
-  document.getElementById('assetHazard').textContent=r.hazard_source_type||'—';
-  document.getElementById('assetTrade').textContent=r.related_trade||'—';
-
-  const rad=r.zone_radius_m||DEFAULT_ZONE_RADIUS[r.zone_classification];
-  document.getElementById('assetRadius').textContent=rad?`${rad} m`:'—';
-  document.getElementById('assetLocation').textContent=r.latitude?`${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}`:'—';
-
-  if(r.notes){
-    document.getElementById('assetNoteRow').style.display='flex';
-    document.getElementById('assetNotes').textContent=r.notes;
-  } else {
-    document.getElementById('assetNoteRow').style.display='none';
-  }
-
-  document.getElementById('assetEditBtn').style.display='';
-  document.getElementById('assetPanel').classList.add('visible');
-  post({type:'ASSET_SELECTED',recordId:r.id});
-}
-
-function hideAsset(){
-  document.getElementById('assetPanel').classList.remove('visible');
-  selectedRecord=null;
-}
-
-function showNoteInfo(n){
-  selectedRecord=null;
-  document.getElementById('assetTag').textContent=n.title||'Note';
-  document.getElementById('assetEquipType').textContent=n.content||'—';
-  document.getElementById('assetZone').textContent='—';
-  document.getElementById('assetHazard').textContent='—';
-  document.getElementById('assetTrade').textContent='—';
-  document.getElementById('assetRadius').textContent='—';
-  document.getElementById('assetLocation').textContent=`${n.lat.toFixed(5)}, ${n.lng.toFixed(5)}`;
-  document.getElementById('assetNoteRow').style.display='none';
-  document.getElementById('assetEditBtn').style.display='none';
-  document.getElementById('assetPanel').classList.add('visible');
-}
-
-document.getElementById('assetCloseBtn').addEventListener('click',()=>{
+document.getElementById('assetCloseBtn').addEventListener('click', () => {
   hideAsset();
-  document.getElementById('assetEditBtn').style.display='';
+  document.getElementById('assetEditBtn').style.display = '';
 });
 
-document.getElementById('assetEditBtn').addEventListener('click',()=>{
-  if(selectedRecord) post({type:'EDIT_RECORD',recordId:selectedRecord.id,projectId});
+document.getElementById('assetEditBtn').addEventListener('click', () => {
+  if (selectedRecord) post({ type: 'EDIT_RECORD', recordId: selectedRecord.id, projectId });
 });
 
-function applyLayers(){
-  groups.assets.forEach(e=>e.show=layers.assets);
-  groups.hazardZones.forEach(e=>e.show=layers.hazardZones);
-  groups.notes.forEach(e=>e.show=layers.notes!==false);
-  groups.shapes.forEach(e=>e.show=true);
-}
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d || !d.type) return;
 
-function pinSvg(color){
-  const s=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"><path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 26 16 26s16-14 16-26C32 7.16 24.84 0 16 0z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="16" cy="16" r="5" fill="white" opacity="0.4"/></svg>`;
-  return `data:image/svg+xml;base64,${btoa(s)}`;
-}
-
-function noteSvg(){
-  const s=`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/><text x="14" y="19" font-size="16" font-weight="bold" fill="white" text-anchor="middle">N</text></svg>`;
-  return `data:image/svg+xml;base64,${btoa(s)}`;
-}
-
-function renderRecords(records){
-  records.filter(r=>r.latitude!=null&&r.longitude!=null).forEach(r=>{
-    const color=PIN_COLOR[r.zone_classification]||PIN_COLOR.default;
-
-    const pin=viewer.entities.add({
-      position:Cesium.Cartesian3.fromDegrees(r.longitude,r.latitude,3),
-      billboard:{
-        image:pinSvg(color),
-        width:32,
-        height:42,
-        verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
-        disableDepthTestDistance:Number.POSITIVE_INFINITY
-      },
-      label:{
-        text:r.asset_tag_number||'',
-        font:'600 11px Inter,sans-serif',
-        fillColor:Cesium.Color.WHITE,
-        outlineColor:Cesium.Color.fromCssColorString('#0f172a'),
-        outlineWidth:2,
-        style:Cesium.LabelStyle.FILL_AND_OUTLINE,
-        pixelOffset:new Cesium.Cartesian2(0,-46),
-        disableDepthTestDistance:Number.POSITIVE_INFINITY
-      }
-    });
-
-    pin._sType='asset';
-    pin._sRecord=r;
-    groups.assets.push(pin);
-
-    if(r.zone_classification&&ZONE_FILL[r.zone_classification]){
-      const [rv,g,b,a]=ZONE_FILL[r.zone_classification];
-      const rad=r.zone_radius_m||DEFAULT_ZONE_RADIUS[r.zone_classification]||3;
-
-      const ell=viewer.entities.add({
-        position:Cesium.Cartesian3.fromDegrees(r.longitude,r.latitude,1),
-        ellipse:{
-          semiMajorAxis:rad,
-          semiMinorAxis:rad,
-          material:new Cesium.Color(rv/255,g/255,b/255,a),
-          outline:true,
-          outlineColor:Cesium.Color.fromCssColorString(ZONE_OUTLINE[r.zone_classification]||'#ffffff'),
-          outlineWidth:1
-        }
-      });
-
-      ell._sType='zone';
-      groups.hazardZones.push(ell);
-    }
-  });
-}
-
-function addNoteMarker(n){
-  if(n.lat==null||n.lng==null) return;
-
-  const ne=viewer.entities.add({
-    position:Cesium.Cartesian3.fromDegrees(n.lng,n.lat,3),
-    billboard:{
-      image:noteSvg(),
-      width:28,
-      height:28,
-      verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
-      disableDepthTestDistance:Number.POSITIVE_INFINITY
-    }
-  });
-
-  ne._sType='note';
-  ne._sNote=n;
-  groups.notes.push(ne);
-}
-
-function renderNotes(notes){
-  notes.filter(n=>n.lat!=null&&n.lng!=null).forEach(addNoteMarker);
-}
-
-function renderShapes(shapes){
-  shapes.forEach(s=>{
-    if(!s.coordinates||s.coordinates.length<2) return;
-
-    const hexColor=s.color||'#0d9488';
-    const c=Cesium.Color.fromCssColorString(hexColor);
-    const pos=s.coordinates.map(p=>Cesium.Cartesian3.fromDegrees(p.lng,p.lat,1));
-
-    if(s.type==='polygon'){
-      const poly=viewer.entities.add({
-        polygon:{
-          hierarchy:new Cesium.PolygonHierarchy(pos),
-          material:c.withAlpha(s.is_boundary?0.1:0.12),
-          outline:true,
-          outlineColor:c,
-          outlineWidth:s.is_boundary?2.5:1.5,
-          heightReference:Cesium.HeightReference.NONE
-        },
-        polyline:{
-          positions:[...pos,pos[0]],
-          width:s.is_boundary?2:1.5,
-          material:s.is_boundary
-            ? new Cesium.PolylineDashMaterialProperty({color:c,dashLength:10})
-            : c,
-          clampToGround:true
-        }
-      });
-      groups.shapes.push(poly);
-    } else if(s.type==='polyline'){
-      groups.shapes.push(viewer.entities.add({
-        polyline:{positions:pos,width:2,material:c,clampToGround:true}
-      }));
-    } else if(s.type==='marker'){
-      groups.shapes.push(viewer.entities.add({
-        position:pos[0],
-        point:{pixelSize:10,color:c,outlineColor:Cesium.Color.WHITE,outlineWidth:2}
-      }));
-    }
-  });
-}
-
-function flyToData(records,shapes){
-  const boundary=shapes.find(s=>s.is_boundary);
-  if(boundary&&boundary.coordinates.length>0){
-    const lats=boundary.coordinates.map(c=>c.lat);
-    const lngs=boundary.coordinates.map(c=>c.lng);
-    flyTo((Math.min(...lats)+Math.max(...lats))/2,(Math.min(...lngs)+Math.max(...lngs))/2,300);
+  if (d.type === 'SET_CONTEXT') {
+    setContext(d.context);
     return;
   }
 
-  const pts=records.filter(r=>r.latitude!=null&&r.longitude!=null);
-  if(pts.length>0){
-    flyTo(
-      pts.reduce((s,r)=>s+r.latitude,0)/pts.length,
-      pts.reduce((s,r)=>s+r.longitude,0)/pts.length,
-      300
-    );
+  if (d.type === 'FLY_TO') {
+    flyTo(d.lat, d.lng, d.height || 200);
+    return;
   }
-}
 
-async function loadData(){
-  if(!projectId) return;
-
-  document.getElementById('loadingText').textContent='Loading project data…';
-
-  Object.values(groups).flat().forEach(e=>{try{viewer.entities.remove(e);}catch(x){}});
-  Object.keys(groups).forEach(k=>groups[k]=[]);
-
-  try {
-    const resp=await fetch(DATA_API,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({projectId}),
-    });
-
-    const data=await resp.json();
-
-    renderRecords(data.records||[]);
-    renderNotes(data.notes||[]);
-    renderShapes(data.shapes||[]);
+  if (d.type === 'LAYER_TOGGLE') {
+    layers[d.layer] = d.visible;
     applyLayers();
-    flyToData(data.records||[],data.shapes||[]);
-
-    post({
-      type:'DATA_LOADED',
-      recordCount:(data.records||[]).length,
-      noteCount:(data.notes||[]).length,
-      shapeCount:(data.shapes||[]).length
-    });
-  } catch(err){
-    console.error('Data load error:',err);
-    post({type:'DATA_ERROR',error:err.message});
+    return;
   }
 
-  document.getElementById('loadingOverlay').classList.add('hidden');
-}
+  if (d.type === 'SET_MODE') {
+    setMode(d.mode);
+    return;
+  }
 
-(async()=>{
-  const params=new URLSearchParams(window.location.search);
-  projectId=params.get('projectId');
+  if (d.type === 'RELOAD_DATA') {
+    loadData();
+    return;
+  }
+
+  if (d.type === 'LOCATE_ME') {
+    flyTo(d.lat, d.lng, d.height || 200);
+    return;
+  }
+
+  if (d.type === 'TRIGGER_HAZCAD') {
+    if (viewContext === CONTEXTS.PROJECT) {
+      post({ type: 'HAZCAD_TRIGGER', projectId });
+      setMode('idle');
+    }
+  }
+});
+
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  projectId = params.get('projectId');
+  setContext(params.get('viewContext') || CONTEXTS.PROJECT);
 
   await initCesium();
 
-  if(!projectId){
+  if (!projectId) {
     document.getElementById('loadingOverlay').classList.add('hidden');
-    post({type:'READY',projectId:null});
+    post({ type: 'READY', projectId: null, context: viewContext });
     return;
   }
 
-  setTimeout(()=>document.getElementById('loadingOverlay').classList.add('hidden'),8000);
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }, 8000);
+
   await loadData();
-  post({type:'READY',projectId});
+  post({ type: 'READY', projectId, context: viewContext });
 })();
 </script>
 </body>
