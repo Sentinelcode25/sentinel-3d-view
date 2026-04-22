@@ -4,16 +4,44 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ordinis HAZLOC GIS – 3D View</title>
+
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
-  <link href__="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #cesiumContainer {
+
+    html, body {
       width: 100%;
       height: 100%;
       overflow: hidden;
       font-family: Inter, system-ui, sans-serif;
       background: #0d1117;
+    }
+
+    body {
+      position: relative;
+    }
+
+    #cesiumContainer {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #0d1117;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .cesium-viewer,
+    .cesium-viewer-cesiumWidget,
+    .cesium-widget,
+    .cesium-widget canvas {
+      width: 100% !important;
+      height: 100% !important;
     }
 
     #loadingOverlay {
@@ -29,7 +57,11 @@
       gap: 16px;
       transition: opacity 0.4s ease;
     }
-    #loadingOverlay.hidden { opacity: 0; pointer-events: none; }
+
+    #loadingOverlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
 
     .spinner {
       width: 40px;
@@ -39,9 +71,15 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
 
-    #loadingText { font-size: 13px; color: #94a3b8; }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #loadingText {
+      font-size: 13px;
+      color: #94a3b8;
+    }
 
     /* Hide only the Cesium UI elements we don't want */
     .cesium-viewer-bottom,
@@ -51,7 +89,9 @@
     .cesium-viewer-vrContainer,
     .cesium-infoBox,
     .cesium-selection-wrapper,
-    .cesium-viewer-toolbar { display: none !important; }
+    .cesium-viewer-toolbar {
+      display: none !important;
+    }
 
     #modeBanner {
       position: fixed;
@@ -70,6 +110,7 @@
       pointer-events: none;
       backdrop-filter: blur(8px);
     }
+
     #modeBanner.visible { display: block; }
 
     #measurePanel, #drawPanel, #notePanel, #assetPanel {
@@ -150,15 +191,18 @@
       font-size: 11px;
       cursor: pointer;
     }
+
     .drawBtn:hover, .panelBtn:hover, #measureClearBtn:hover, #assetEditBtn:hover {
       background: #334155;
       color: #fff;
     }
+
     .drawBtn.primary {
       background: #1d4ed8;
       border-color: #3b82f6;
       color: #fff;
     }
+
     .drawBtn.primary:hover { background: #2563eb; }
 
     #noteTitle, #noteContent {
@@ -172,8 +216,11 @@
       margin-bottom: 8px;
       font-family: inherit;
     }
+
     #noteContent { height: 80px; resize: vertical; }
+
     .noteActions { display: flex; gap: 8px; }
+
     .noteBtn {
       flex: 1;
       padding: 8px 0;
@@ -183,6 +230,7 @@
       font-size: 12px;
       font-weight: 600;
     }
+
     #noteSaveBtn { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
     #noteCancelBtn { background: #1e293b; color: #cbd5e1; }
 
@@ -196,6 +244,7 @@
       font-size: 18px;
       cursor: pointer;
     }
+
     #assetCloseBtn:hover { color: #fff; }
     #assetTag { font-size: 14px; font-weight: 700; margin-bottom: 12px; padding-right: 20px; }
     #assetEditBtn { margin-top: 10px; width: 100%; }
@@ -227,8 +276,13 @@
       backdrop-filter: blur(8px);
       transition: background 0.15s;
     }
+
     #layerPickerBtn:hover { background: rgba(30, 41, 59, 0.98); }
-    #layerPickerBtn svg { width: 15px; height: 15px; }
+
+    #layerPickerBtn svg {
+      width: 15px;
+      height: 15px;
+    }
 
     #layerPickerMenu {
       display: none;
@@ -242,6 +296,7 @@
       backdrop-filter: blur(12px);
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
+
     #layerPickerMenu.open { display: flex; }
 
     .layerOption {
@@ -254,11 +309,14 @@
       transition: background 0.12s;
       border: 1px solid transparent;
     }
+
     .layerOption:hover { background: rgba(255,255,255,0.07); }
+
     .layerOption.active {
       background: rgba(59, 130, 246, 0.18);
       border-color: rgba(59, 130, 246, 0.4);
     }
+
     .layerOption .layerIcon {
       width: 32px;
       height: 32px;
@@ -270,9 +328,11 @@
       justify-content: center;
       font-size: 16px;
     }
+
     .layerOption .layerInfo { flex: 1; }
     .layerOption .layerName { font-size: 12px; font-weight: 600; color: #f1f5f9; }
     .layerOption .layerDesc { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+
     .layerOption .layerCheck {
       width: 16px;
       height: 16px;
@@ -283,10 +343,12 @@
       align-items: center;
       justify-content: center;
     }
+
     .layerOption.active .layerCheck {
       background: #3b82f6;
       border-color: #3b82f6;
     }
+
     .layerOption.active .layerCheck::after {
       content: '';
       width: 5px;
@@ -316,7 +378,6 @@
 
   <div id="modeBanner"></div>
 
-  <!-- ── Custom layer/terrain picker ──────────────────────────────────────── -->
   <div id="layerPicker">
     <button id="layerPickerBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -435,25 +496,22 @@ let mode = 'idle';
 let selectedRecord = null;
 let pendingNote = null;
 let layers = { assets: true, hazardZones: true, notes: true };
-// Only fly to data on the very first load — not on post-save silent reloads.
 let hasFlownToData = false;
 
 const groups = { assets: [], hazardZones: [], notes: [], shapes: [], temp: [] };
 
 let measurePoints = [], measureEntities = [];
 let drawPoints = [], drawEntities = [];
-// drawKind is kept in sync with the active mode inside setMode().
 let drawKind = 'polygon';
 
-// ── Layer switching state ──────────────────────────────────────────────────
 let currentLayer = 'google';
 let googleTileset = null;
 
-// ── Layer picker UI ───────────────────────────────────────────────────────
 document.getElementById('layerPickerBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   document.getElementById('layerPickerMenu').classList.toggle('open');
 });
+
 document.addEventListener('click', () => {
   document.getElementById('layerPickerMenu').classList.remove('open');
 });
@@ -463,6 +521,7 @@ async function selectLayer(layer) {
     document.getElementById('layerPickerMenu').classList.remove('open');
     return;
   }
+
   currentLayer = layer;
 
   document.querySelectorAll('.layerOption').forEach(el => {
@@ -473,8 +532,6 @@ async function selectLayer(layer) {
   document.getElementById('layerPickerLabel2').textContent = labels[layer];
   document.getElementById('layerPickerMenu').classList.remove('open');
 
-  // SAFE: only remove the tracked googleTileset primitive — never primitives.removeAll()
-  // which would destroy Cesium's internal billboard/label collections used by entities.
   if (googleTileset) {
     viewer.scene.primitives.remove(googleTileset);
     googleTileset = null;
@@ -512,11 +569,11 @@ async function selectLayer(layer) {
       new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' })
     );
   }
-  // Entity collections (pins, zones, notes, shapes) live in viewer.entities
-  // and are completely unaffected by terrain/tileset changes.
 }
 
-function post(msg) { try { window.parent.postMessage(msg, '*'); } catch(e) {} }
+function post(msg) {
+  try { window.parent.postMessage(msg, '*'); } catch(e) {}
+}
 
 function normalizeContext(value) {
   const v = String(value || '').toLowerCase().trim();
@@ -550,7 +607,6 @@ function setMode(requestedMode) {
   const nextMode = normalizeMode(requestedMode);
   mode = modeAllowedInContext(nextMode) ? nextMode : 'idle';
 
-  // Keep drawKind in sync so Finish & Save uses the correct shape type.
   if (mode === 'draw_polyline') drawKind = 'polyline';
   else if (mode === 'draw_polygon' || mode === 'boundary') drawKind = 'polygon';
 
@@ -591,22 +647,30 @@ function geodesicDistanceMeters(c1, c2) {
   if (!g1 || !g2) return 0;
   return new Cesium.EllipsoidGeodesic(g1, g2).surfaceDistance || 0;
 }
+
 function verticalDifferenceMeters(c1, c2) {
   const g1 = Cesium.Cartographic.fromCartesian(c1);
   const g2 = Cesium.Cartographic.fromCartesian(c2);
   return g1 && g2 ? g2.height - g1.height : 0;
 }
+
 function fmt(m) {
   const abs = Math.abs(m);
   return abs >= 1000 ? `${(m/1000).toFixed(2)} km` : `${m.toFixed(2)} m`;
 }
+
 function flyTo(lat, lng, h=200) {
-  viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lng, lat, h), duration: 1.5 });
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(lng, lat, h),
+    duration: 1.5
+  });
 }
+
 function pinSvg(color) {
   const s = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"><path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 26 16 26s16-14 16-26C32 7.16 24.84 0 16 0z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="16" cy="16" r="5" fill="white" opacity="0.4"/></svg>`;
   return `data:image/svg+xml;base64,${btoa(s)}`;
 }
+
 function noteSvg() {
   const s = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/><text x="14" y="19" font-size="16" font-weight="bold" fill="white" text-anchor="middle">N</text></svg>`;
   return `data:image/svg+xml;base64,${btoa(s)}`;
@@ -616,6 +680,7 @@ function clearGroup(name) {
   groups[name].forEach(e => { try { viewer.entities.remove(e); } catch(x) {} });
   groups[name] = [];
 }
+
 function applyLayers() {
   groups.assets.forEach(e => e.show = layers.assets);
   groups.hazardZones.forEach(e => e.show = layers.hazardZones);
@@ -626,13 +691,20 @@ function addTempPinMarker(lat, lng) {
   clearGroup('temp');
   const pin = viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(lng, lat, 3),
-    billboard: { image: pinSvg('#ef4444'), width: 30, height: 40, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, disableDepthTestDistance: Number.POSITIVE_INFINITY }
+    billboard: {
+      image: pinSvg('#ef4444'),
+      width: 30,
+      height: 40,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    }
   });
   groups.temp.push(pin);
 }
 
 function addSavedShapeLocal(shapeType, coords, opts={}) {
   if (!coords || coords.length < 1) return;
+
   const isBoundary = !!opts.isBoundary;
   const colorHex = opts.color || (isBoundary ? '#f59e0b' : '#0d9488');
   const fillColor = Cesium.Color.fromCssColorString(colorHex).withAlpha(isBoundary ? 0.10 : 0.18);
@@ -642,15 +714,34 @@ function addSavedShapeLocal(shapeType, coords, opts={}) {
   if (shapeType === 'boundary' || shapeType === 'polygon') {
     if (positions.length < 3) return;
     const e = viewer.entities.add({
-      polygon: { hierarchy: new Cesium.PolygonHierarchy(positions), material: isBoundary ? Cesium.Color.TRANSPARENT : fillColor, outline: false },
-      polyline: { positions: [...positions, positions[0]], width: isBoundary ? 3 : 2, material: isBoundary ? new Cesium.PolylineDashMaterialProperty({ color: lineColor, dashLength: 10 }) : lineColor, clampToGround: true }
+      polygon: {
+        hierarchy: new Cesium.PolygonHierarchy(positions),
+        material: isBoundary ? Cesium.Color.TRANSPARENT : fillColor,
+        outline: false
+      },
+      polyline: {
+        positions: [...positions, positions[0]],
+        width: isBoundary ? 3 : 2,
+        material: isBoundary
+          ? new Cesium.PolylineDashMaterialProperty({ color: lineColor, dashLength: 10 })
+          : lineColor,
+        clampToGround: true
+      }
     });
     groups.shapes.push(e);
     return;
   }
+
   if (shapeType === 'line' || shapeType === 'polyline') {
     if (positions.length < 2) return;
-    const e = viewer.entities.add({ polyline: { positions, width: 2, material: lineColor, clampToGround: true } });
+    const e = viewer.entities.add({
+      polyline: {
+        positions,
+        width: 2,
+        material: lineColor,
+        clampToGround: true
+      }
+    });
     groups.shapes.push(e);
   }
 }
@@ -658,21 +749,48 @@ function addSavedShapeLocal(shapeType, coords, opts={}) {
 function renderRecords(records) {
   records.filter(r => r.latitude != null && r.longitude != null).forEach(r => {
     const color = PIN_COLOR[r.zone_classification] || PIN_COLOR.default;
+
     const pin = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(r.longitude, r.latitude, 3),
-      billboard: { image: pinSvg(color), width: 32, height: 42, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, disableDepthTestDistance: Number.POSITIVE_INFINITY },
-      label: { text: r.asset_tag_number || '', font: '600 11px Inter,sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.fromCssColorString('#0f172a'), outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new Cesium.Cartesian2(0,-46), disableDepthTestDistance: Number.POSITIVE_INFINITY }
+      billboard: {
+        image: pinSvg(color),
+        width: 32,
+        height: 42,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      },
+      label: {
+        text: r.asset_tag_number || '',
+        font: '600 11px Inter,sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.fromCssColorString('#0f172a'),
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: new Cesium.Cartesian2(0,-46),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
     });
-    pin._sType = 'asset'; pin._sRecord = r; groups.assets.push(pin);
+
+    pin._sType = 'asset';
+    pin._sRecord = r;
+    groups.assets.push(pin);
 
     if (r.zone_classification && ZONE_FILL[r.zone_classification]) {
       const [rv,g,b,a] = ZONE_FILL[r.zone_classification];
       const rad = r.zone_radius_m || DEFAULT_ZONE_RADIUS[r.zone_classification] || 3;
       const ell = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(r.longitude, r.latitude, 1),
-        ellipse: { semiMajorAxis: rad, semiMinorAxis: rad, material: new Cesium.Color(rv/255,g/255,b/255,a), outline: true, outlineColor: Cesium.Color.fromCssColorString(ZONE_OUTLINE[r.zone_classification]||'#fff'), outlineWidth: 1 }
+        ellipse: {
+          semiMajorAxis: rad,
+          semiMinorAxis: rad,
+          material: new Cesium.Color(rv/255,g/255,b/255,a),
+          outline: true,
+          outlineColor: Cesium.Color.fromCssColorString(ZONE_OUTLINE[r.zone_classification]||'#fff'),
+          outlineWidth: 1
+        }
       });
-      ell._sType = 'zone'; groups.hazardZones.push(ell);
+      ell._sType = 'zone';
+      groups.hazardZones.push(ell);
     }
   });
 }
@@ -681,17 +799,31 @@ function addNoteMarker(n) {
   if (n.lat == null || n.lng == null) return;
   const ne = viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(n.lng, n.lat, 3),
-    billboard: { image: noteSvg(), width: 28, height: 28, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, disableDepthTestDistance: Number.POSITIVE_INFINITY }
+    billboard: {
+      image: noteSvg(),
+      width: 28,
+      height: 28,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    }
   });
-  ne._sType = 'note'; ne._sNote = n; groups.notes.push(ne);
+  ne._sType = 'note';
+  ne._sNote = n;
+  groups.notes.push(ne);
 }
-function renderNotes(notes) { notes.filter(n => n.lat != null && n.lng != null).forEach(addNoteMarker); }
+
+function renderNotes(notes) {
+  notes.filter(n => n.lat != null && n.lng != null).forEach(addNoteMarker);
+}
 
 function renderShapes(shapes) {
   shapes.forEach(s => {
     if (!s.coordinates || s.coordinates.length < 2) return;
     const isBoundary = !!s.is_boundary || s.type === 'boundary';
-    addSavedShapeLocal(isBoundary ? 'boundary' : s.type, s.coordinates, { isBoundary, color: s.color });
+    addSavedShapeLocal(isBoundary ? 'boundary' : s.type, s.coordinates, {
+      isBoundary,
+      color: s.color
+    });
   });
 }
 
@@ -702,11 +834,18 @@ function showAsset(r) {
   document.getElementById('assetZone').textContent = r.zone_classification || '—';
   document.getElementById('assetHazard').textContent = r.hazard_source_type || '—';
   document.getElementById('assetTrade').textContent = r.related_trade || '—';
+
   const rad = r.zone_radius_m || DEFAULT_ZONE_RADIUS[r.zone_classification];
   document.getElementById('assetRadius').textContent = rad ? `${rad} m` : '—';
   document.getElementById('assetLocation').textContent = r.latitude ? `${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}` : '—';
-  if (r.notes) { document.getElementById('assetNoteRow').style.display='flex'; document.getElementById('assetNotes').textContent=r.notes; }
-  else { document.getElementById('assetNoteRow').style.display='none'; }
+
+  if (r.notes) {
+    document.getElementById('assetNoteRow').style.display='flex';
+    document.getElementById('assetNotes').textContent=r.notes;
+  } else {
+    document.getElementById('assetNoteRow').style.display='none';
+  }
+
   document.getElementById('assetEditBtn').style.display = '';
   document.getElementById('assetPanel').classList.add('visible');
   post({ type: 'ASSET_SELECTED', recordId: r.id });
@@ -733,7 +872,8 @@ function hideAsset() {
 
 function clearMeasure() {
   measureEntities.forEach(e => { try { viewer.entities.remove(e); } catch(x) {} });
-  measureEntities = []; measurePoints = [];
+  measureEntities = [];
+  measurePoints = [];
   document.getElementById('measureHorizontal').textContent = '—';
   document.getElementById('measureVertical').textContent = '—';
   document.getElementById('measure3D').textContent = '—';
@@ -743,29 +883,55 @@ function clearMeasure() {
 
 function addMeasPt(lat, lng, cart) {
   measurePoints.push({ lat, lng, cart });
+
   measureEntities.push(viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(lng, lat, 2),
-    point: { pixelSize: 8, color: Cesium.Color.fromCssColorString('#3b82f6'), outlineColor: Cesium.Color.WHITE, outlineWidth: 1.5 }
+    point: {
+      pixelSize: 8,
+      color: Cesium.Color.fromCssColorString('#3b82f6'),
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 1.5
+    }
   }));
 
   if (measurePoints.length >= 2) {
     const p1 = measurePoints[measurePoints.length-2];
     const p2 = measurePoints[measurePoints.length-1];
+
     const horizontal = geodesicDistanceMeters(p1.cart, p2.cart);
     const vertical = verticalDifferenceMeters(p1.cart, p2.cart);
     const spatial3D = Cesium.Cartesian3.distance(p1.cart, p2.cart);
-    const ml = (p1.lat+p2.lat)/2, mn = (p1.lng+p2.lng)/2;
+    const ml = (p1.lat+p2.lat)/2;
+    const mn = (p1.lng+p2.lng)/2;
 
     measureEntities.push(viewer.entities.add({
-      polyline: { positions: [p1.cart, p2.cart], width: 2, material: new Cesium.PolylineDashMaterialProperty({ color: Cesium.Color.fromCssColorString('#3b82f6') }), clampToGround: true }
+      polyline: {
+        positions: [p1.cart, p2.cart],
+        width: 2,
+        material: new Cesium.PolylineDashMaterialProperty({
+          color: Cesium.Color.fromCssColorString('#3b82f6')
+        }),
+        clampToGround: true
+      }
     }));
+
     measureEntities.push(viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(mn, ml, 5),
-      label: { text: `H ${fmt(horizontal)}`, font: '600 12px Inter,sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, disableDepthTestDistance: Number.POSITIVE_INFINITY }
+      label: {
+        text: `H ${fmt(horizontal)}`,
+        font: '600 12px Inter,sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
     }));
 
     let totalHorizontal = 0;
-    for (let i=1; i<measurePoints.length; i++) totalHorizontal += geodesicDistanceMeters(measurePoints[i-1].cart, measurePoints[i].cart);
+    for (let i=1; i<measurePoints.length; i++) {
+      totalHorizontal += geodesicDistanceMeters(measurePoints[i-1].cart, measurePoints[i].cart);
+    }
 
     document.getElementById('measureHorizontal').textContent = fmt(horizontal);
     document.getElementById('measureVertical').textContent = fmt(vertical);
@@ -773,41 +939,65 @@ function addMeasPt(lat, lng, cart) {
     document.getElementById('measureTotal').textContent = fmt(totalHorizontal);
     document.getElementById('measureCount').textContent = `${measurePoints.length} points`;
 
-    post({ type: 'MEASURE_UPDATE', horizontal: fmt(horizontal), vertical: fmt(vertical), spatial3D: fmt(spatial3D), totalHorizontal: fmt(totalHorizontal), points: measurePoints.length });
+    post({
+      type: 'MEASURE_UPDATE',
+      horizontal: fmt(horizontal),
+      vertical: fmt(vertical),
+      spatial3D: fmt(spatial3D),
+      totalHorizontal: fmt(totalHorizontal),
+      points: measurePoints.length
+    });
   }
 }
 
 function clearDraw() {
   drawEntities.forEach(e => { try { viewer.entities.remove(e); } catch(x) {} });
-  drawEntities = []; drawPoints = [];
+  drawEntities = [];
+  drawPoints = [];
   document.getElementById('drawPointCount').textContent = '0 points — click to add vertices';
 }
 
 function addDrawPt(lat, lng, cart) {
   drawPoints.push({ lat, lng, cart });
+
   drawEntities.push(viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(lng, lat, 2),
-    point: { pixelSize: 7, color: Cesium.Color.fromCssColorString('#ef4444'), outlineColor: Cesium.Color.WHITE, outlineWidth: 1.5 }
+    point: {
+      pixelSize: 7,
+      color: Cesium.Color.fromCssColorString('#ef4444'),
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 1.5
+    }
   }));
 
   if (drawPoints.length >= 2) {
-    drawEntities.filter(e => e._draftShape).forEach(e => { try { viewer.entities.remove(e); } catch(x) {} });
+    drawEntities.filter(e => e._draftShape).forEach(e => {
+      try { viewer.entities.remove(e); } catch(x) {}
+    });
     drawEntities = drawEntities.filter(e => !e._draftShape);
+
     const positions = drawPoints.map(p => p.cart);
     const shapeType = mode === 'boundary' ? 'polygon' : (drawKind === 'polygon' ? 'polygon' : 'polyline');
     const linePositions = shapeType === 'polygon' ? [...positions, positions[0]] : positions;
+
     const draft = viewer.entities.add({
       polyline: {
-        positions: linePositions, width: mode === 'boundary' ? 3 : 2,
+        positions: linePositions,
+        width: mode === 'boundary' ? 3 : 2,
         material: mode === 'boundary'
-          ? new Cesium.PolylineDashMaterialProperty({ color: Cesium.Color.fromCssColorString('#ef4444'), dashLength: 10 })
+          ? new Cesium.PolylineDashMaterialProperty({
+              color: Cesium.Color.fromCssColorString('#ef4444'),
+              dashLength: 10
+            })
           : Cesium.Color.fromCssColorString('#ef4444').withAlpha(0.75),
         clampToGround: true
       }
     });
+
     draft._draftShape = true;
     drawEntities.push(draft);
   }
+
   document.getElementById('drawPointCount').textContent = `${drawPoints.length} point${drawPoints.length!==1?'s':''} placed`;
 }
 
@@ -819,14 +1009,17 @@ function flyToData(records, shapes) {
     flyTo((Math.min(...lats)+Math.max(...lats))/2, (Math.min(...lngs)+Math.max(...lngs))/2, 300);
     return;
   }
+
   const pts = records.filter(r => r.latitude != null && r.longitude != null);
   if (pts.length > 0) {
-    flyTo(pts.reduce((s,r)=>s+r.latitude,0)/pts.length, pts.reduce((s,r)=>s+r.longitude,0)/pts.length, 300);
+    flyTo(
+      pts.reduce((s,r)=>s+r.latitude,0)/pts.length,
+      pts.reduce((s,r)=>s+r.longitude,0)/pts.length,
+      300
+    );
   }
 }
 
-// silent=true: post-save reload — re-renders entities but does NOT move the camera.
-// silent=false (default): initial load — shows loading overlay and flies to data.
 async function loadData(opts) {
   const silent = !!(opts && opts.silent);
   if (!projectId) return;
@@ -835,7 +1028,6 @@ async function loadData(opts) {
     document.getElementById('loadingText').textContent = 'Loading project data…';
   }
 
-  // Clear all tracked entity groups individually (safe — never calls viewer.entities.removeAll)
   Object.values(groups).flat().forEach(e => { try { viewer.entities.remove(e); } catch(x) {} });
   Object.keys(groups).forEach(k => groups[k] = []);
 
@@ -845,6 +1037,7 @@ async function loadData(opts) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId }),
     });
+
     const data = await resp.json();
 
     renderRecords(data.records || []);
@@ -852,13 +1045,17 @@ async function loadData(opts) {
     renderShapes(data.shapes || []);
     applyLayers();
 
-    // Only auto-fly on the first ever load, not on subsequent reloads.
     if (!silent && !hasFlownToData) {
       hasFlownToData = true;
       flyToData(data.records || [], data.shapes || []);
     }
 
-    post({ type: 'DATA_LOADED', recordCount: (data.records||[]).length, noteCount: (data.notes||[]).length, shapeCount: (data.shapes||[]).length });
+    post({
+      type: 'DATA_LOADED',
+      recordCount: (data.records||[]).length,
+      noteCount: (data.notes||[]).length,
+      shapeCount: (data.shapes||[]).length
+    });
   } catch(err) {
     console.error('Data load error:', err);
     post({ type: 'DATA_ERROR', error: err.message });
@@ -871,16 +1068,25 @@ async function loadData(opts) {
 
 async function initCesium() {
   Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
+
   viewer = new Cesium.Viewer('cesiumContainer', {
-    timeline: false, animation: false,
+    timeline: false,
+    animation: false,
     baseLayerPicker: false,
-    geocoder: false, homeButton: false, sceneModePicker: false,
-    navigationHelpButton: false, fullscreenButton: false,
-    infoBox: false, selectionIndicator: false,
+    geocoder: false,
+    homeButton: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    fullscreenButton: false,
+    infoBox: false,
+    selectionIndicator: false,
     creditContainer: document.createElement('div'),
   });
 
-  // Default: Google Photorealistic 3D Tiles
+  viewer.scene.globe.depthTestAgainstTerrain = false;
+  viewer.scene.requestRenderMode = false;
+  viewer.resize();
+
   try {
     googleTileset = await Cesium.createGooglePhotorealistic3DTileset();
     viewer.scene.primitives.add(googleTileset);
@@ -901,22 +1107,35 @@ async function initCesium() {
         const ent = picked.id;
         if (ent._sType === 'asset') showAsset(ent._sRecord);
         else if (ent._sType === 'note') showNoteInfo(ent._sNote);
-      } else { hideAsset(); }
+      } else {
+        hideAsset();
+      }
       return;
     }
+
     if (!cart) return;
+
     const cg = Cesium.Cartographic.fromCartesian(cart);
     const lat = Cesium.Math.toDegrees(cg.latitude);
     const lng = Cesium.Math.toDegrees(cg.longitude);
 
-    if (mode === 'measure') { addMeasPt(lat, lng, cart); return; }
-    if (mode === 'draw_polygon' || mode === 'draw_polyline' || mode === 'boundary') { addDrawPt(lat, lng, cart); return; }
+    if (mode === 'measure') {
+      addMeasPt(lat, lng, cart);
+      return;
+    }
+
+    if (mode === 'draw_polygon' || mode === 'draw_polyline' || mode === 'boundary') {
+      addDrawPt(lat, lng, cart);
+      return;
+    }
+
     if (mode === 'note') {
       pendingNote = { lat, lng };
       document.getElementById('noteCoords').textContent = `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       document.getElementById('notePanel').classList.add('visible');
       return;
     }
+
     if (mode === 'pin') {
       addTempPinMarker(lat, lng);
       post({ type: 'PIN_PLACED', lat, lng, projectId });
@@ -929,32 +1148,46 @@ async function initCesium() {
     const cart = viewer.scene.pickPosition(click.position);
     if (!cart) return;
     const cg = Cesium.Cartographic.fromCartesian(cart);
-    post({ type: 'RIGHT_CLICK', lat: Cesium.Math.toDegrees(cg.latitude), lng: Cesium.Math.toDegrees(cg.longitude) });
+    post({
+      type: 'RIGHT_CLICK',
+      lat: Cesium.Math.toDegrees(cg.latitude),
+      lng: Cesium.Math.toDegrees(cg.longitude)
+    });
   }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 
   viewer.camera.changed.addEventListener(() => {
     const p = viewer.camera.positionCartographic;
-    post({ type: 'CAMERA_STATE', lat: Cesium.Math.toDegrees(p.latitude), lng: Cesium.Math.toDegrees(p.longitude), height: p.height });
+    post({
+      type: 'CAMERA_STATE',
+      lat: Cesium.Math.toDegrees(p.latitude),
+      lng: Cesium.Math.toDegrees(p.longitude),
+      height: p.height
+    });
   });
 }
 
-// ── Button event listeners ────────────────────────────────────────────────
 document.getElementById('measureClearBtn').addEventListener('click', () => {
-  clearMeasure(); setMode('idle'); post({ type: 'MODE_CHANGE', mode: 'idle' });
+  clearMeasure();
+  setMode('idle');
+  post({ type: 'MODE_CHANGE', mode: 'idle' });
 });
+
 document.getElementById('drawUndoBtn').addEventListener('click', () => {
   if (!drawPoints.length) return;
-  const pts = [...drawPoints]; clearDraw();
+  const pts = [...drawPoints];
+  clearDraw();
   pts.slice(0,-1).forEach(p => addDrawPt(p.lat, p.lng, p.cart));
 });
+
 document.getElementById('drawCancelBtn').addEventListener('click', () => {
-  clearDraw(); setMode('idle');
+  clearDraw();
+  setMode('idle');
   document.getElementById('drawPanel').classList.remove('visible');
   post({ type: 'MODE_CHANGE', mode: 'idle' });
 });
+
 document.getElementById('drawFinishBtn').addEventListener('click', () => {
   const isBoundary = mode === 'boundary';
-  // Use drawKind (kept in sync with mode) for correct shape type.
   const shapeType = isBoundary ? 'boundary' : (drawKind === 'polyline' ? 'line' : 'polygon');
 
   if ((shapeType === 'boundary' || shapeType === 'polygon') && drawPoints.length < 3) return;
@@ -962,43 +1195,67 @@ document.getElementById('drawFinishBtn').addEventListener('click', () => {
 
   const coordinates = drawPoints.map(p => ({ lat: p.lat, lng: p.lng }));
 
-  addSavedShapeLocal(shapeType, coordinates, { isBoundary, color: isBoundary ? '#f59e0b' : '#0d9488' });
+  addSavedShapeLocal(shapeType, coordinates, {
+    isBoundary,
+    color: isBoundary ? '#f59e0b' : '#0d9488'
+  });
 
   if (isBoundary) post({ type: 'BOUNDARY_SET', coordinates, projectId });
   post({ type: 'DRAW_COMPLETE', shapeType, coordinates, projectId });
 
-  clearDraw(); setMode('idle');
+  clearDraw();
+  setMode('idle');
   document.getElementById('drawPanel').classList.remove('visible');
 });
+
 document.getElementById('noteCancelBtn').addEventListener('click', () => {
   pendingNote = null;
   document.getElementById('notePanel').classList.remove('visible');
   document.getElementById('noteTitle').value = '';
   document.getElementById('noteContent').value = '';
-  setMode('idle'); post({ type: 'MODE_CHANGE', mode: 'idle' });
+  setMode('idle');
+  post({ type: 'MODE_CHANGE', mode: 'idle' });
 });
+
 document.getElementById('noteSaveBtn').addEventListener('click', () => {
   if (!pendingNote) return;
+
   const content = document.getElementById('noteContent').value.trim();
-  if (!content) { document.getElementById('noteContent').style.borderColor = '#ef4444'; return; }
+  if (!content) {
+    document.getElementById('noteContent').style.borderColor = '#ef4444';
+    return;
+  }
+
   const title = document.getElementById('noteTitle').value.trim();
   const savedNote = { lat: pendingNote.lat, lng: pendingNote.lng, title, content };
-  post({ type: 'SAVE_NOTE', lat: pendingNote.lat, lng: pendingNote.lng, title, content, projectId });
+
+  post({
+    type: 'SAVE_NOTE',
+    lat: pendingNote.lat,
+    lng: pendingNote.lng,
+    title,
+    content,
+    projectId
+  });
+
   document.getElementById('notePanel').classList.remove('visible');
   document.getElementById('noteTitle').value = '';
   document.getElementById('noteContent').value = '';
   pendingNote = null;
   addNoteMarker(savedNote);
-  setMode('idle'); post({ type: 'MODE_CHANGE', mode: 'idle' });
+  setMode('idle');
+  post({ type: 'MODE_CHANGE', mode: 'idle' });
 });
+
 document.getElementById('assetCloseBtn').addEventListener('click', () => {
-  hideAsset(); document.getElementById('assetEditBtn').style.display = '';
+  hideAsset();
+  document.getElementById('assetEditBtn').style.display = '';
 });
+
 document.getElementById('assetEditBtn').addEventListener('click', () => {
   if (selectedRecord) post({ type: 'EDIT_RECORD', recordId: selectedRecord.id, projectId });
 });
 
-// ── postMessage from React ────────────────────────────────────────────────
 window.addEventListener('message', e => {
   const d = e.data;
   if (!d || !d.type) return;
@@ -1006,25 +1263,29 @@ window.addEventListener('message', e => {
   if (d.type === 'FLY_TO') { flyTo(d.lat, d.lng, d.height||200); return; }
   if (d.type === 'LAYER_TOGGLE') { layers[d.layer] = d.visible; applyLayers(); return; }
   if (d.type === 'SET_MODE') { setMode(d.mode); return; }
-  // Post-save reloads use silent:true so the camera stays put.
   if (d.type === 'RELOAD_DATA') { loadData({ silent: true }); return; }
   if (d.type === 'LOCATE_ME') { flyTo(d.lat, d.lng, d.height||200); return; }
   if (d.type === 'TRIGGER_HAZCAD') {
-    if (viewContext === CONTEXTS.PROJECT) { post({ type: 'HAZCAD_TRIGGER', projectId }); setMode('idle'); }
+    if (viewContext === CONTEXTS.PROJECT) {
+      post({ type: 'HAZCAD_TRIGGER', projectId });
+      setMode('idle');
+    }
   }
 });
 
-// ── Boot ──────────────────────────────────────────────────────────────────
 (async () => {
   const params = new URLSearchParams(window.location.search);
   projectId = params.get('projectId');
   setContext(params.get('viewContext') || CONTEXTS.PROJECT);
+
   await initCesium();
+
   if (!projectId) {
     document.getElementById('loadingOverlay').classList.add('hidden');
     post({ type: 'READY', projectId: null, context: viewContext });
     return;
   }
+
   setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 8000);
   await loadData({ silent: false });
   post({ type: 'READY', projectId, context: viewContext });
